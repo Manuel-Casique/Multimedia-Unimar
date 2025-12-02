@@ -1,0 +1,42 @@
+
+.card {
+    background-color: gray !important; 
+}
+
+.Cimage {
+    border-radius: 1rem;
+    width: 100%;
+}
+
+/* Efecto hover (oscurece imagen + muestra texto) */
+.card:hover .Cimage {
+    filter: brightness(0.6); /* Oscurece la imagen al 60% */
+    transition: filter 0.3s ease; /* Transición suave */
+}
+
+.hover-text {
+    opacity: 0; /* Texto invisible por defecto */
+    transition: opacity 0.3s ease; /* Transición suave */
+    background-color: rgba(0, 0, 0, 0.3); /* Fondo semi-transparente (opcional) */
+}
+
+.card:hover .hover-text {
+    opacity: 1; /* Muestra el texto al hacer hover */
+}
+
+.card-link-whatch-more:before {
+    content: "|";
+    margin-right: 0.2em;
+    color: #e0ded9;
+}
+
+.card-link {
+    color: #336699;
+    font-size: small;
+}
+
+.h-100{
+
+    height: 100% !important;
+
+}

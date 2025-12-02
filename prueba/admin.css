@@ -1,0 +1,25 @@
+        body {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .main-header.navbar-blue-u {
+            background-color: #004b9a; /* Un azul corporativo como en la imagen */
+            color: #ffffff;
+        }
+        .main-header .nav-link, .main-header .user-panel h6 {
+            color: #ffffff;
+        }
+
+    .loginuser {
+        color: white !important;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .loginuser:hover {
+        color: #f1f1f1 !important;
+        text-decoration: underline;
+    }
+
+        .nav-sidebar .nav-link .nav-icon {
+        color: #004b9a 
+    }

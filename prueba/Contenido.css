@@ -1,0 +1,176 @@
+/* Contenido.css */
+.sidebar-container {
+    background-color: #0d4d97;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,.1);
+    min-width: 200px;
+    max-width: 250px;
+}
+
+.sidebar-list-group {
+    background-color: transparent;
+    color: white;
+    border-radius: 0;
+    border: none !important;
+}
+
+.sidebar-list-group .list-group-item {
+    border: none !important;
+    background-color: #0d4d97 !important;
+    color: white !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+    text-align: left; /* **CAMBIO CLAVE: Alinea el texto a la izquierda** */
+    display: flex; /* Asegura que flexbox esté activo para justify-content */
+    align-items: center; /* Centra verticalmente */
+    font-weight: bold;
+}
+
+.filter-header {
+    background-color: #0054A7;
+    color: white;
+    padding: 15px 15px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    text-align: left; /* Asegura la alineación izquierda del texto */
+    justify-content: flex-start; /* Asegura la alineación izquierda del contenido */
+}
+.filter-header .bi-funnel-fill {
+    margin-right: 8px;
+}
+.filter-item {
+    padding: 15px 15px;
+    margin-bottom: 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    /* Estas propiedades (background-color, color, etc.) se gestionan ahora en .sidebar-list-group .list-group-item */
+}
+.filter-item:last-child {
+    border-bottom: none;
+}
+.filter-item:hover {
+    background-color: #0b5ed7 !important;
+    color: white !important;
+}
+
+.filter-item.active,
+.filter-item:focus {
+    background-color: #0b5ed7 !important;
+    color: white !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+.filter-item-collapse-trigger {
+    /* Estas propiedades (background-color, color, etc.) se gestionan ahora en .sidebar-list-group .list-group-item */
+    /* Aquí solo definimos lo específico del trigger (la flecha a la derecha) */
+    font-weight: bold;
+    display: flex; /* Mantenemos flex para posicionar la flecha */
+    justify-content: space-between; /* Para separar AÑO y la flecha */
+    align-items: center;
+    padding: 15px 15px;
+    margin-bottom: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+.filter-item-collapse-trigger:hover {
+    background-color: #0b5ed7 !important;
+    color: white !important;
+}
+.filter-item-collapse-trigger.active,
+.filter-item-collapse-trigger:focus {
+    background-color: #0d6efd !important; /* Mantiene el azul base en focus/active */
+    color: white !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+
+.collapse-sub-item {
+    padding: 10px 15px 10px 15px; /* Padding para indentar */
+    margin-bottom: 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    justify-content: center;
+    /* text-align: left; y justify-content: flex-start; ya se heredan de .sidebar-list-group .list-group-item */
+}
+.collapse-sub-item:hover {
+    background-color: #0b5ed7 !important;
+    color: white !important;
+}
+.collapse-sub-item.active,
+.collapse-sub-item:focus {
+    background-color: #0b5ed7 !important;
+    color: white !important;
+    font-weight: bold;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+.collapse-sub-item:last-child {
+    border-bottom: none;
+}
+
+/* Ajustes para el sistema de columnas */
+.col-md-3, .col-lg-2 {
+    max-width: 250px; /* Ajusta el ancho para la sidebar */
+    flex: 0 0 auto;
+    width: 100%;
+}
+/* Asegura que el contenido principal ocupe el resto del espacio */
+.col-md-9, .col-lg-10 {
+    flex: 1; /* Permite que ocupe el espacio restante */
+    max-width: none; /* Deshace cualquier max-width predeterminado si lo hubiera */
+}
+
+/* Tarjetas */
+
+
+.card {
+    background-color: #e8e8e8;
+    border-radius: 1.175rem !important;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    color: black ;
+    font-weight: bold ;
+}
+
+.card-text {
+    text-align: justify;
+
+}
+
+.card-img-placeholder {
+    width: 200px; /* Ancho fijo para la imagen de marcador de posición */
+    height: 200px; /* Alto fijo para la imagen de marcador de posición */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0; /* Evita que la imagen se encoja */
+    border-bottom-right-radius: 0px !important;
+    border-top-right-radius: 0px !important;
+    overflow: hidden;
+    border-radius: 1.175rem;
+}
+
+.full-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
