@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+  color: rgb(var(--foreground-rgb));
+}
+
+/* Clases de utilidad UNIMAR */
+.btn-primary {
+  @apply bg-unimar-primary text-white px-4 py-2 rounded hover:bg-[#083066] transition-colors;
+}
+
+.card {
+  @apply bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300;
+}
+
+/* Efectos de hover para cards */
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.card-image {
+  @apply rounded-xl w-full;
+  transition: filter 0.3s ease;
+}
+
+.card:hover .card-image {
+  filter: brightness(0.6);
+}
+
+.hover-text {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.card:hover .hover-text {
+  opacity: 1;
+}
