@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useSidebarStore } from '@/stores/useSidebarStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
+  faHome,
   faUpload, 
   faImages, 
   faChartPie, 
@@ -13,17 +14,27 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Sidebar() {
-  const [isHovered, setIsHovered] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout } = useAuthStore();
+  const { isExpanded, isPinned, setExpanded } = useSidebarStore();
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
-  const isExpanded = isHovered;
+  const handleMouseEnter = () => {
+    if (!isPinned) {
+      setExpanded(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isPinned) {
+      setExpanded(false);
+    }
+  };
 
   const navItems = [
     {
@@ -39,7 +50,7 @@ export default function Sidebar() {
     {
       label: 'Estadísticas',
       icon: faChartPie,
-      href: '/dashboard',
+      href: '/stats',
     },
     {
       label: 'Configuración',
@@ -50,8 +61,8 @@ export default function Sidebar() {
 
   return (
     <aside 
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`
         relative bg-white
         flex flex-col shadow-lg z-20 transition-[width] duration-300 ease-out will-change-[width]
@@ -60,7 +71,10 @@ export default function Sidebar() {
       `}
     >
       {/* Header / Logo with text beside it */}
-      <div className="h-[70px] flex items-center px-3 border-b border-gray-200 bg-white overflow-hidden">
+      <div 
+        className="h-[70px] flex items-center px-3 border-b border-gray-200 bg-white overflow-hidden cursor-pointer hover:bg-slate-50 transition-colors"
+        onClick={() => router.push('/dashboard')}
+      >
         <div className="flex items-center gap-2 w-full">
           <img 
             src="https://portalunimar.unimar.edu.ve/image/logo-unimar-127.png" 

@@ -38,12 +38,38 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Recent Activity (last 5 files)
+        $recentActivity = MediaAsset::where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($item) {
+                $type = explode('/', $item->mime_type)[0] ?? 'other';
+                $timeAgo = $item->created_at->diffForHumans();
+                
+                return [
+                    'id' => $item->id,
+                    'title' => $item->title ?? $item->original_name,
+                    'type' => $type,
+                    'action' => 'upload',
+                    'time' => "Subido {$timeAgo}",
+                    'status' => $item->status === 'uploaded' ? 'completed' : ($item->status === 'pending' ? 'pending' : 'processing'),
+                ];
+            });
+
+        // Pending count
+        $pendingCount = MediaAsset::where('user_id', $userId)
+            ->where('status', 'pending')
+            ->count();
+
         return response()->json([
             'total_files' => $totalFiles,
             'total_size' => $totalSize,
             'total_size_formatted' => $this->formatBytes($totalSize),
             'type_counts' => $typeCounts,
-            'category_data' => $categoryData
+            'category_data' => $categoryData,
+            'recent_activity' => $recentActivity,
+            'pending_count' => $pendingCount,
         ]);
     }
 

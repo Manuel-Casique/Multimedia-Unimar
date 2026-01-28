@@ -3,6 +3,7 @@
 import { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useSidebarStore } from '@/stores/useSidebarStore';
 import Sidebar from './Sidebar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faUser } from '@fortawesome/free-solid-svg-icons';
@@ -20,6 +21,7 @@ export default function AdminLayout({
 }: AdminLayoutProps) {
   const router = useRouter();
   const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { toggleSidebar, isPinned } = useSidebarStore();
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) {
@@ -46,7 +48,7 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         
-        {/* Top Navbar - Blue with user info (no hamburger since sidebar auto-expands) */}
+        {/* Top Navbar - Blue with user info */}
         <nav 
           className="w-full shadow-md flex items-center justify-between px-4"
           style={{ 
@@ -54,8 +56,14 @@ export default function AdminLayout({
             height: '57px'
           }}
         >
-          {/* Left: Title or empty */}
-          <div></div>
+          {/* Left: Hamburger menu button */}
+          <button 
+            className={`p-2 rounded-lg transition-colors ${isPinned ? 'bg-white/20' : 'hover:bg-white/10'}`}
+            onClick={toggleSidebar}
+            title={isPinned ? 'Contraer menú' : 'Expandir menú'}
+          >
+            <FontAwesomeIcon icon={faBars} className="w-5 h-5 text-white" />
+          </button>
 
           {/* Right: User info */}
           <div className="flex items-center gap-3">

@@ -32,7 +32,7 @@ export default function LoginPage() {
       const { token, user } = response.data;
       setToken(token);
       setUser(user);
-      router.push('/ingest');
+      router.push('/dashboard');
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Credenciales incorrectas.');

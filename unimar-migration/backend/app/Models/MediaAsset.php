@@ -35,6 +35,17 @@ class MediaAsset extends Model
     ];
 
     /**
+     * Accessors to append to model's array/JSON representation.
+     */
+    protected $appends = [
+        'file_url',
+        'thumbnail_url',
+        'formatted_size',
+        'width',
+        'height',
+    ];
+
+    /**
      * Estados posibles del asset
      */
     public const STATUS_PENDING = 'pending';
@@ -100,5 +111,61 @@ class MediaAsset extends Model
         } else {
             return $bytes . ' bytes';
         }
+    }
+
+    /**
+     * Get image width (for images only).
+     */
+    public function getWidthAttribute(): ?int
+    {
+        if (!$this->file_path || !str_starts_with($this->mime_type ?? '', 'image/')) {
+            return null;
+        }
+        
+        try {
+            $path = storage_path('app/' . $this->file_path);
+            if (!file_exists($path)) {
+                $path = storage_path('app/public/' . str_replace('public/', '', $this->file_path));
+            }
+            
+            if (file_exists($path)) {
+                $size = @getimagesize($path);
+                if ($size) {
+                    return $size[0];
+                }
+            }
+        } catch (\Exception $e) {
+            // Silently fail
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get image height (for images only).
+     */
+    public function getHeightAttribute(): ?int
+    {
+        if (!$this->file_path || !str_starts_with($this->mime_type ?? '', 'image/')) {
+            return null;
+        }
+        
+        try {
+            $path = storage_path('app/' . $this->file_path);
+            if (!file_exists($path)) {
+                $path = storage_path('app/public/' . str_replace('public/', '', $this->file_path));
+            }
+            
+            if (file_exists($path)) {
+                $size = @getimagesize($path);
+                if ($size) {
+                    return $size[1];
+                }
+            }
+        } catch (\Exception $e) {
+            // Silently fail
+        }
+        
+        return null;
     }
 }

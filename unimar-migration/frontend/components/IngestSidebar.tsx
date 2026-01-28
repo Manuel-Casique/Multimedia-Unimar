@@ -172,7 +172,7 @@ export default function IngestSidebar() {
             </div>
 
             {/* Tags */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label className="label-unimar">
                 Etiquetas
               </label>
@@ -180,15 +180,15 @@ export default function IngestSidebar() {
                 type="text"
                 value={bulkData.tags}
                 onChange={(e) => setBulkData({ ...bulkData, tags: e.target.value })}
-                placeholder="ej: graduación, 2026, evento"
+                placeholder="Añadir etiquetas..."
                 className="input-unimar"
               />
-              <p className="text-xs text-slate-400">Separadas por comas</p>
+              <p className="text-[10px] text-slate-400 italic">Ej: graduación, evento, 2026 (separadas por comas)</p>
             </div>
 
             {/* Nueva Metadata Bulk */}
             <div className="grid grid-cols-2 gap-3">
-               <div className="space-y-2">
+               <div className="space-y-1">
                   <label className="label-unimar">Autor</label>
                   <input
                     type="text"
@@ -197,8 +197,9 @@ export default function IngestSidebar() {
                     className="input-unimar"
                     placeholder="Fotógrafo..."
                   />
+                  <p className="text-[10px] text-slate-400 italic">Ej: Juan Pérez, Prensa UNIMAR</p>
                </div>
-               <div className="space-y-2">
+               <div className="space-y-1">
                   <label className="label-unimar">Fecha</label>
                   <input
                     type="datetime-local"
@@ -206,10 +207,11 @@ export default function IngestSidebar() {
                     onChange={(e) => setBulkData({ ...bulkData, date_taken: e.target.value })}
                     className="input-unimar"
                   />
+                  <p className="text-[10px] text-slate-400 italic">Ej: 27/01/2026 10:30</p>
                </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
                <label className="label-unimar">Ubicación</label>
                <input
                  type="text"
@@ -218,9 +220,10 @@ export default function IngestSidebar() {
                  className="input-unimar"
                  placeholder="Lugar..."
                />
+               <p className="text-[10px] text-slate-400 italic">Ej: Auditorio UNIMAR, Sede Porlamar</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
                <label className="label-unimar">Descripción Masiva</label>
                <textarea
                  value={bulkData.description || ''}
@@ -228,6 +231,7 @@ export default function IngestSidebar() {
                  className="input-unimar h-20 resize-none"
                  placeholder="Se aplicará a todos (cuidado)..."
                />
+               <p className="text-[10px] text-slate-400 italic">Ej: Fotos del acto de graduación de la promoción 2025-II</p>
             </div>
 
             {/* Apply Button */}
