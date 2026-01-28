@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,4 +29,10 @@ Route::get('/verificar', function () {
             'app_url' => config('app.url'),
         ],
     ]);
+});
+
+// Rutas de autenticación con Google OAuth
+Route::prefix('auth')->group(function () {
+    Route::get('/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 });

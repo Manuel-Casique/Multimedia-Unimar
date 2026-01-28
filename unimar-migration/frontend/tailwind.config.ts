@@ -10,25 +10,29 @@ const config: Config = {
     extend: {
       colors: {
         unimar: {
-          primary: "#0b3d91", // Azul oscuro principal
-          light: "#d0e0fc", // Azul claro (fondos)
-          accent: "#336699", // Azul medio (enlaces)
-          gray: "gray", // Gris cards
+          primary: "#004b9a", // admin.css: .main-header.navbar-blue-u
+          secondary: "#0d4d97", // Contenido.css: .sidebar-container
+          tertiary: "#0054A7", // Contenido.css: .filter-header
+          hover: "#0b5ed7", // Contenido.css: .filter-item:hover (Bootstrap primary)
+          background: "#F5F5F5", // Manteniendo un fondo limpio pero neutro
+          card: "#e8e8e8", // Contenido.css: .card background
+          surface: "#FFFFFF",
           text: {
-            dark: "#000000",
-            light: "#e0ded9",
-          },
-          state: {
-            success: "#28a745",
-            warning: "#ffc107",
-            danger: "#dc3545",
-            info: "#17a2b8",
+            primary: "#000000", // card-title color black
+            secondary: "#64748b",
+            light: "#94a3b8",
+            link: "#336699", // style.css: .card-link
           },
         },
       },
       fontFamily: {
         sans: ["Montserrat", "sans-serif"],
       },
+      backgroundImage: {
+        // Gradient simulando el navbar-blue-u si se desea, o solid
+        'unimar-gradient': "linear-gradient(to right, #004b9a, #0d4d97)", 
+        'unimar-card-gradient': "linear-gradient(135deg, #0d4d97 0%, #004b9a 100%)",
+      }
     },
   },
   plugins: [],

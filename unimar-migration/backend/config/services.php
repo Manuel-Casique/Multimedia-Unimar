@@ -42,4 +42,11 @@ return [
         'max_tokens' => env('GEMINI_MAX_TOKENS', 2048),
     ],
 
+    // Configuración de Google OAuth (Socialite)
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];
