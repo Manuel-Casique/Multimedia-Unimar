@@ -11,9 +11,11 @@ class Publication extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'title',
         'slug',
         'description',
+        'content',
         'status',
         'publication_date',
         'published_at',

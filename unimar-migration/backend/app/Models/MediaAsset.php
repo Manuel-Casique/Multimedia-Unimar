@@ -26,10 +26,12 @@ class MediaAsset extends Model
         'date_taken',
         'author',
         'location',
+        'exif_data',
     ];
 
     protected $casts = [
         'tags' => 'array',
+        'exif_data' => 'array',
         'file_size' => 'integer',
         'date_taken' => 'datetime',
     ];

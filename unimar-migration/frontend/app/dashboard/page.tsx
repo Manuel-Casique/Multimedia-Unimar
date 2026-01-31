@@ -34,6 +34,17 @@ interface DashboardStats {
     time: string;
     status: string;
   }>;
+  publications?: {
+    total: number;
+    status_counts: { [key: string]: number };
+    recent: Array<{
+      id: number;
+      title: string;
+      slug: string;
+      status: string;
+      time_ago: string;
+    }>;
+  };
 }
 
 export default function DashboardPage() {
@@ -207,6 +218,77 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Publications Summary */}
+          {stats?.publications && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-[#30669a]">
+                <h3 className="font-bold flex items-center gap-2 text-white">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                  </svg>
+                  Resumen de Publicaciones
+                </h3>
+                <button 
+                  onClick={() => router.push('/publications')}
+                  className="text-xs font-medium text-white/80 hover:text-white hover:underline"
+                >
+                  Ver todas
+                </button>
+              </div>
+              
+              {/* Stats Row */}
+              <div className="grid grid-cols-3 divide-x divide-slate-100">
+                <div className="p-4 text-center">
+                  <p className="text-2xl font-bold text-slate-800">{stats.publications.total}</p>
+                  <p className="text-xs text-slate-500 mt-1">Total</p>
+                </div>
+                <div className="p-4 text-center">
+                  <p className="text-2xl font-bold text-green-600">{stats.publications.status_counts['published'] || 0}</p>
+                  <p className="text-xs text-slate-500 mt-1">Publicadas</p>
+                </div>
+                <div className="p-4 text-center">
+                  <p className="text-2xl font-bold text-amber-600">{stats.publications.status_counts['draft'] || 0}</p>
+                  <p className="text-xs text-slate-500 mt-1">Borradores</p>
+                </div>
+              </div>
+
+              {/* Recent Publications List */}
+              {stats.publications.recent.length > 0 ? (
+                <ul className="divide-y divide-slate-100 border-t border-slate-100">
+                  {stats.publications.recent.map((pub) => (
+                    <li 
+                      key={pub.id} 
+                      className="px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
+                      onClick={() => router.push(`/publications/${pub.id}/edit`)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-700 truncate max-w-[300px]">{pub.title}</p>
+                        <p className="text-xs text-slate-400">{pub.time_ago}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        pub.status === 'published' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {pub.status === 'published' ? 'Publicado' : 'Borrador'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-6 text-center text-slate-400 border-t border-slate-100">
+                  <p>No hay publicaciones aún</p>
+                  <button 
+                    onClick={() => router.push('/publications/new')}
+                    className="mt-2 text-sm text-[#30669a] hover:underline"
+                  >
+                    Crear primera publicación
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Footer */}
           <div className="text-center text-slate-400 text-sm pt-4">

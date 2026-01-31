@@ -10,7 +10,8 @@ import {
   faImages, 
   faChartPie, 
   faCog, 
-  faSignOutAlt
+  faSignOutAlt,
+  faNewspaper
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Sidebar() {
@@ -46,6 +47,11 @@ export default function Sidebar() {
       label: 'Galería',
       icon: faImages,
       href: '/gallery',
+    },
+    {
+      label: 'Publicaciones',
+      icon: faNewspaper,
+      href: '/publications',
     },
     {
       label: 'Estadísticas',

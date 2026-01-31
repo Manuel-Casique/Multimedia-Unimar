@@ -1,114 +1,92 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useAuthStore } from '@/stores/useAuthStore';
+import PublicationStats from '@/components/PublicationStats';
+
 export default function Home() {
+  const { user } = useAuthStore();
+  const [greeting, setGreeting] = useState('');
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Buenos días');
+    else if (hour < 18) setGreeting('Buenas tardes');
+    else setGreeting('Buenas noches');
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-unimar-light to-white">
-      {/* Header con colores UNIMAR */}
-      <header className="bg-unimar-primary text-white py-6 shadow-lg">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold">Sistema Multimedia UNIMAR</h1>
-          <p className="text-unimar-light mt-2">Migración Laravel 11 + Next.js 14</p>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+      {/* Welcome Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800">
+          {greeting}, <span className="text-[#30669a]">{user?.name || 'Administrador'}</span>
+        </h1>
+        <p className="text-slate-500 mt-2">Bienvenido al Panel de Control de Multimedia UNIMAR.</p>
+      </div>
 
-      {/* Contenido principal */}
-      <main className="container mx-auto px-4 py-12">
-        {/* Tarjetas de verificación */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {/* Card 1 - Backend */}
-          <div className="card p-6">
-            <div className="w-12 h-12 bg-unimar-primary rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Main Column (2/3) - Publications Stats & Activity */}
+        <div className="lg:col-span-2 space-y-8">
+          <PublicationStats />
+          
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-4">
+             <Link href="/publications/new" className="p-4 bg-white border border-slate-200 rounded-xl hover:border-[#30669a] hover:shadow-md transition-all group">
+                <div className="w-10 h-10 bg-blue-50 text-[#30669a] rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-slate-800">Nueva Publicación</h3>
+                <p className="text-sm text-slate-500 mt-1">Crear noticia o evento</p>
+             </Link>
+
+             <Link href="/ingest" className="p-4 bg-white border border-slate-200 rounded-xl hover:border-[#30669a] hover:shadow-md transition-all group">
+                <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-slate-800">Subir Multimedia</h3>
+                <p className="text-sm text-slate-500 mt-1">Cargar fotos o videos</p>
+             </Link>
+          </div>
+        </div>
+
+        {/* Sidebar Column (1/3) - System Status or Quick Links */}
+        <div className="space-y-6">
+          {/* System Info Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+            <h4 className="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-unimar-primary mb-2">Backend Laravel 11</h3>
-            <p className="text-gray-600">
-              Sanctum, Spatie Permission, Intervention Image, Gemini SDK instalados
-            </p>
-          </div>
-
-          {/* Card 2 - Frontend */}
-          <div className="card p-6">
-            <div className="w-12 h-12 bg-unimar-accent rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-unimar-accent mb-2">Frontend Next.js 14</h3>
-            <p className="text-gray-600">
-              TypeScript, Tailwind, Quill.js, React Query, Recharts instalados
-            </p>
-          </div>
-
-          {/* Card 3 - Identidad */}
-          <div className="card p-6">
-            <div className="w-12 h-12 bg-unimar-state-success rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-unimar-state-success mb-2">Identidad UNIMAR</h3>
-            <p className="text-gray-600">
-              Colores institucionales y fuente Montserrat aplicados
-            </p>
-          </div>
-        </div>
-
-        {/* Sección de colores */}
-        <div className="card p-8 mb-12">
-          <h2 className="text-2xl font-bold text-unimar-primary mb-6">Paleta de Colores UNIMAR</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <div className="w-full h-24 bg-unimar-primary rounded-lg mb-2"></div>
-              <p className="font-semibold">Primary</p>
-              <p className="text-sm text-gray-600">#0b3d91</p>
-            </div>
-            <div>
-              <div className="w-full h-24 bg-unimar-light rounded-lg mb-2"></div>
-              <p className="font-semibold">Light</p>
-              <p className="text-sm text-gray-600">#d0e0fc</p>
-            </div>
-            <div>
-              <div className="w-full h-24 bg-unimar-accent rounded-lg mb-2"></div>
-              <p className="font-semibold">Accent</p>
-              <p className="text-sm text-gray-600">#336699</p>
+              Estado del Sistema
+            </h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Versión</span>
+                <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-600">v1.2.0</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Backend</span>
+                <span className="text-green-600 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span> Online
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Base de Datos</span>
+                <span className="text-green-600 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span> Conectado
+                </span>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Botones de prueba */}
-        <div className="card p-8">
-          <h2 className="text-2xl font-bold text-unimar-primary mb-6">Componentes de Prueba</h2>
-          <div className="flex flex-wrap gap-4">
-            <button className="btn-primary">
-              Botón Primario
-            </button>
-            <button className="bg-unimar-accent text-white px-4 py-2 rounded hover:bg-opacity-90 transition-colors">
-              Botón Accent
-            </button>
-            <button className="bg-unimar-state-success text-white px-4 py-2 rounded hover:bg-opacity-90 transition-colors">
-              Botón Success
-            </button>
-          </div>
-        </div>
-
-        {/* Verificación de fuente */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600">
-            Esta página usa la fuente <span className="font-bold">Montserrat</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            Inspecciona cualquier elemento para verificar
-          </p>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-unimar-primary text-white py-6 mt-12">
-        <div className="container mx-auto px-4 text-center">
-          <p>Universidad de Margarita - Sistema Multimedia</p>
-          <p className="text-sm text-unimar-light mt-2">Módulo 1: Configuración Inicial ✅</p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

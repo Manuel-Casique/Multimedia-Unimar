@@ -171,12 +171,23 @@ export default function GalleryPage() {
     return parts[1]?.toUpperCase() || mimeType;
   };
 
-  // Get aspect ratio string
-  const getAspectRatio = (width?: number, height?: number) => {
+  // Get orientation string
+  const getOrientation = (width?: number, height?: number) => {
     if (!width || !height) return null;
-    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-    const divisor = gcd(width, height);
-    return `${width / divisor}:${height / divisor}`;
+    if (width > height) return 'Horizontal';
+    if (width < height) return 'Vertical';
+    return 'Cuadrado';
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('');
+    setStartDate('');
+    setEndDate('');
+    setAuthorFilter('');
+    setTagsFilter('');
+    setLocationFilter('');
   };
 
   const handleDelete = async () => {
@@ -268,6 +279,13 @@ export default function GalleryPage() {
             style={{ backgroundColor: '#30669a' }}
           >
             Buscar
+          </button>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="px-4 py-2.5 text-slate-600 font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-all"
+          >
+            Limpiar Todo
           </button>
         </form>
 
@@ -465,8 +483,8 @@ export default function GalleryPage() {
                         {item.width && item.height && (
                           <span className="text-[10px] text-white/60">{item.width}×{item.height}</span>
                         )}
-                        {getAspectRatio(item.width, item.height) && (
-                          <span className="text-[10px] text-white/50">({getAspectRatio(item.width, item.height)})</span>
+                        {getOrientation(item.width, item.height) && (
+                          <span className="text-[10px] text-white/50">({getOrientation(item.width, item.height)})</span>
                         )}
                       </div>
                       {item.author && (
@@ -610,10 +628,10 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* Media Viewer Modal */}
+      {/* Media Viewer Modal - Horizontal Layout with Metadata Panel */}
       {viewerOpen && selectedMedia && (
         <div 
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
           onClick={closeViewer}
         >
           {/* Close button */}
@@ -629,7 +647,6 @@ export default function GalleryPage() {
           {/* Navigation arrows */}
           {flatMedia.length > 1 && (
             <>
-              {/* Previous button */}
               <button
                 onClick={(e) => { e.stopPropagation(); navigateMedia('prev'); }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 text-white/80 hover:bg-black/70 hover:text-white transition-all z-50"
@@ -638,78 +655,167 @@ export default function GalleryPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              
-              {/* Next button */}
               <button
                 onClick={(e) => { e.stopPropagation(); navigateMedia('next'); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 text-white/80 hover:bg-black/70 hover:text-white transition-all z-50"
+                className="absolute right-20 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 text-white/80 hover:bg-black/70 hover:text-white transition-all z-50"
               >
                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-
-              {/* Counter indicator */}
               <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/50 rounded-full text-white/80 text-sm">
                 {flatMedia.findIndex(m => m.id === selectedMedia.id) + 1} / {flatMedia.length}
               </div>
             </>
           )}
 
-          {/* Media content */}
+          {/* Main content - Horizontal layout */}
           <div 
-            className="max-w-5xl max-h-[90vh] flex flex-col items-center"
+            className="flex flex-col lg:flex-row gap-6 max-w-7xl w-full max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            {selectedMedia.mime_type.startsWith('image/') ? (
-              <img 
-                src={getMediaUrl(selectedMedia)} 
-                alt={selectedMedia.title}
-                className="max-w-full max-h-[70vh] object-contain rounded-lg"
-              />
-            ) : selectedMedia.mime_type.startsWith('video/') ? (
-              <video 
-                src={getMediaUrl(selectedMedia)} 
-                controls 
-                autoPlay
-                className="max-w-full max-h-[70vh] rounded-lg"
-              />
-            ) : selectedMedia.mime_type.startsWith('audio/') ? (
-              <div className="bg-white/10 p-8 rounded-xl flex flex-col items-center">
-                <svg className="w-24 h-24 text-white mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
-                <audio src={getMediaUrl(selectedMedia)} controls autoPlay className="w-80" />
-              </div>
-            ) : null}
-
-            {/* Info panel */}
-            <div className="mt-6 text-white text-center max-w-lg">
-              <h2 className="text-xl font-semibold">{selectedMedia.title}</h2>
-              {selectedMedia.description && (
-                <p className="text-white/70 mt-2 text-sm">{selectedMedia.description}</p>
-              )}
-              <div className="flex flex-wrap items-center justify-center gap-3 mt-3 text-xs text-white/60">
-                {selectedMedia.category && <span className="bg-white/20 px-2 py-1 rounded">{selectedMedia.category}</span>}
-                <span>{selectedMedia.formatted_size}</span>
-                <span>{new Date(selectedMedia.created_at).toLocaleDateString('es-VE')}</span>
-                {selectedMedia.author && <span>Por: {selectedMedia.author}</span>}
-                {selectedMedia.location && <span>📍 {selectedMedia.location}</span>}
-              </div>
-              {selectedMedia.tags && selectedMedia.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center mt-3">
-                  {selectedMedia.tags.map((tag, i) => (
-                    <span key={i} className="text-xs bg-[#30669a]/50 text-white px-2 py-1 rounded">{tag}</span>
-                  ))}
+            {/* Left: Media content */}
+            <div className="flex-1 flex items-center justify-center min-w-0">
+              {selectedMedia.mime_type.startsWith('image/') ? (
+                <img 
+                  src={getMediaUrl(selectedMedia)} 
+                  alt={selectedMedia.title}
+                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                />
+              ) : selectedMedia.mime_type.startsWith('video/') ? (
+                <video 
+                  src={getMediaUrl(selectedMedia)} 
+                  controls 
+                  autoPlay
+                  className="max-w-full max-h-[80vh] rounded-lg"
+                />
+              ) : selectedMedia.mime_type.startsWith('audio/') ? (
+                <div className="bg-white/10 p-8 rounded-xl flex flex-col items-center">
+                  <svg className="w-24 h-24 text-white mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                  <audio src={getMediaUrl(selectedMedia)} controls autoPlay className="w-80" />
                 </div>
+              ) : null}
+            </div>
+
+            {/* Right: Metadata panel */}
+            <div className="lg:w-80 w-full bg-slate-900 rounded-xl p-5 overflow-y-auto max-h-[80vh] flex-shrink-0">
+              <h2 className="text-xl font-bold text-white mb-4 truncate" title={selectedMedia.title}>
+                {selectedMedia.title}
+              </h2>
+              
+              {selectedMedia.description && (
+                <p className="text-white/70 text-sm mb-4 leading-relaxed">{selectedMedia.description}</p>
               )}
+
+              {/* Metadata grid */}
+              <div className="space-y-3">
+                {/* Category */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/50">Categoría</p>
+                    <p className="text-sm text-white font-medium capitalize">{selectedMedia.category || 'Sin categoría'}</p>
+                  </div>
+                </div>
+
+                {/* Author */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/50">Autor</p>
+                    <p className="text-sm text-white font-medium">{selectedMedia.author || 'Desconocido'}</p>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/50">Ubicación</p>
+                    <p className="text-sm text-white font-medium">{selectedMedia.location || 'Sin ubicación'}</p>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/50">Fecha de carga</p>
+                    <p className="text-sm text-white font-medium">
+                      {new Date(selectedMedia.created_at).toLocaleDateString('es-VE', { 
+                        day: 'numeric', month: 'long', year: 'numeric' 
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                <hr className="border-white/10 my-3" />
+
+                {/* Technical info */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-xs text-white/50">Formato</p>
+                    <p className="text-sm text-white font-medium">{getFormatLabel(selectedMedia.mime_type)}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-xs text-white/50">Tamaño</p>
+                    <p className="text-sm text-white font-medium">{selectedMedia.formatted_size}</p>
+                  </div>
+                  {selectedMedia.width && selectedMedia.height && (
+                    <>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-white/50">Dimensiones</p>
+                        <p className="text-sm text-white font-medium">{selectedMedia.width}×{selectedMedia.height}</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-white/50">Orientación</p>
+                        <p className="text-sm text-white font-medium">{getOrientation(selectedMedia.width, selectedMedia.height)}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Tags */}
+                {selectedMedia.tags && selectedMedia.tags.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs text-white/50 mb-2">Etiquetas</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMedia.tags.map((tag, i) => (
+                        <span key={i} className="text-xs bg-[#30669a]/50 text-white px-2.5 py-1 rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Download button */}
               <a
                 href={getMediaUrl(selectedMedia)}
                 download={selectedMedia.title || 'archivo'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 mt-5 px-6 py-2.5 bg-[#30669a] hover:bg-[#255080] text-white font-medium rounded-lg transition-colors"
+                className="flex items-center justify-center gap-2 w-full mt-6 px-4 py-3 bg-[#30669a] hover:bg-[#255080] text-white font-medium rounded-xl transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
