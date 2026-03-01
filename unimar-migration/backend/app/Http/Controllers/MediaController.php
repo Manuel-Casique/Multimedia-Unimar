@@ -12,7 +12,7 @@ class MediaController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MediaAsset::with('user')
+        $query = MediaAsset::with(['user', 'tags'])
             ->orderBy('created_at', 'desc');
 
         if ($request->has('category') && $request->input('category')) {
@@ -61,10 +61,76 @@ class MediaController extends Controller
         return response()->json($media);
     }
 
+    /**
+     * Update the specified media asset in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $media = MediaAsset::findOrFail($id);
+
+            // Permitir actualización si es el dueño o si tiene rol de admin
+            $user = auth()->user();
+            if ($media->user_id !== $user->id && !$user->hasRole('admin')) {
+                return response()->json(['message' => 'No tienes permiso para editar este archivo.'], 403);
+            }
+
+            $validated = $request->validate([
+                'title' => 'string|max:255',
+                'description' => 'nullable|string',
+                'category' => 'nullable|string|max:100',
+                'author' => 'nullable|string|max:100',
+                'location' => 'nullable|string|max:150',
+                'date_taken' => 'nullable|date',
+                'tags' => 'nullable|array',
+            ]);
+
+            // Filtrar del array validado lo que sea tags porque se manejan diferente
+            $fillableData = \Illuminate\Support\Arr::except($validated, ['tags']);
+            $media->update($fillableData);
+
+            if (isset($validated['tags'])) {
+                $tagIds = [];
+                foreach ($validated['tags'] as $tagName) {
+                    $slug = \Illuminate\Support\Str::slug($tagName);
+                    $tagModel = \App\Models\Tag::firstOrCreate(
+                        ['slug' => $slug],
+                        ['name' => ucfirst($tagName)]
+                    );
+                    $tagIds[] = $tagModel->id;
+                }
+                $media->tags()->sync($tagIds);
+            }
+
+            // Recargar con relaciones para la respuesta
+            $media->load('tags');
+
+            return response()->json([
+                'message' => 'Archivo actualizado con éxito.',
+                'media' => $media
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al actualizar: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function destroy(MediaAsset $media)
     {
         if ($media->user_id !== auth()->id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($media->publications()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete this asset because it is currently used in one or more publications.'
+            ], 422);
         }
 
         if ($media->file_path) {
@@ -100,6 +166,16 @@ class MediaController extends Controller
             
             foreach ($assets as $asset) {
                 try {
+                    // Check if used in publications
+                    if ($asset->publications()->exists()) {
+                        $errors[] = [
+                            'id' => $asset->id,
+                            'error' => 'En uso por publicaciones'
+                        ];
+                        \Log::warning('Cannot delete asset in use by publication', ['asset_id' => $asset->id]);
+                        continue;
+                    }
+
                     // Delete physical file if exists
                     if ($asset->file_path) {
                         $deleted = \Storage::disk('public')->delete($asset->file_path);

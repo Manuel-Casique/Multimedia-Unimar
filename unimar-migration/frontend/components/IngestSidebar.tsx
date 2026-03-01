@@ -43,6 +43,8 @@ export default function IngestSidebar() {
   const hasFiles = files.length > 0;
   const isSingleSelection = selectedFiles.length === 1;
 
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   // Load metadata when selecting a SINGLE file
   useEffect(() => {
     if (isSingleSelection) {
@@ -67,6 +69,71 @@ export default function IngestSidebar() {
       });
     }
   }, [selectedIds.join(','), files]);
+
+  // Convert File to Base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const generateAITags = async () => {
+    if (!hasSelection) return;
+
+    setIsAiLoading(true);
+    
+    try {
+      // Tomamos el primer archivo de la selección (en caso de q sean múltiples tomaremos el primero como referencia visual)
+      const fileContext = selectedFiles[0];
+      const base64Data = await fileToBase64(fileContext.file);
+
+      const response = await api.post('/ai/media/analyze-base64', {
+        image_base64: base64Data,
+        mime_type: fileContext.file.type || 'image/jpeg',
+        title: fileContext.title || '',
+        description: bulkData.description || '',
+        category: bulkData.category || ''
+      });
+
+      if (response.data && response.data.tags) {
+        // Combinamos tags existentes con los nuevos sugeridos por la IA, evitando duplicados
+        const currentTags = bulkData.tags ? bulkData.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+        const aiTags = response.data.tags;
+        
+        const combinedTags = Array.from(new Set([...currentTags, ...aiTags]));
+        
+        setBulkData(prev => ({
+          ...prev,
+          tags: combinedTags.join(', ')
+        }));
+
+        MySwal.fire({
+          icon: 'success',
+          title: 'IA Análisis Completado',
+          text: `Gemini ha encontrado ${aiTags.length} etiquetas sugeridas.`,
+          timer: 2000,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'rounded-2xl border border-unimar-surface shadow-xl',
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error in AI Tag Generation:', error);
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error de IA',
+        text: 'Nuestra IA se encuentra ocupada o hubo un problema al analizar la imagen.',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleApplyToSelected = () => {
     const updates: any = {};
@@ -292,8 +359,26 @@ export default function IngestSidebar() {
 
             {/* Tags */}
             <div className="space-y-1">
-              <label className="label-unimar">
-                Etiquetas
+              <label className="label-unimar flex justify-between items-center">
+                <span>Etiquetas</span>
+                <button 
+                  onClick={generateAITags}
+                  disabled={isAiLoading || !hasSelection}
+                  className="text-xs flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+                  title="Generar etiquetas mágicas con IA"
+                >
+                  {isAiLoading ? (
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  )}
+                  Auto IA
+                </button>
               </label>
               <input
                 type="text"

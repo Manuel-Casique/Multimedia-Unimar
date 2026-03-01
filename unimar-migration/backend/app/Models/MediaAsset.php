@@ -18,6 +18,7 @@ class MediaAsset extends Model
         'category',
         'tags',
         'file_path',
+        'disk',
         'original_name',
         'thumbnail_path',
         'mime_type',
@@ -30,7 +31,6 @@ class MediaAsset extends Model
     ];
 
     protected $casts = [
-        'tags' => 'array',
         'exif_data' => 'array',
         'file_size' => 'integer',
         'date_taken' => 'datetime',
@@ -83,6 +83,9 @@ class MediaAsset extends Model
      */
     public function getFileUrlAttribute(): string
     {
+        if ($this->disk === 's3') {
+            return \Storage::disk($this->disk)->url($this->file_path);
+        }
         return asset('storage/' . str_replace('public/', '', $this->file_path));
     }
 
@@ -93,6 +96,9 @@ class MediaAsset extends Model
     {
         if (!$this->thumbnail_path) {
             return null;
+        }
+        if ($this->disk === 's3') {
+            return \Storage::disk($this->disk)->url($this->thumbnail_path);
         }
         return asset('storage/' . str_replace('public/', '', $this->thumbnail_path));
     }
@@ -169,5 +175,21 @@ class MediaAsset extends Model
         }
         
         return null;
+    }
+
+    /**
+     * Get all of the tags for the media asset.
+     */
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    /**
+     * Get the publications that use this media asset.
+     */
+    public function publications()
+    {
+        return $this->belongsToMany(Publication::class, 'media_asset_publication');
     }
 }

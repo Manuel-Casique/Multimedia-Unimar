@@ -101,20 +101,34 @@ class IngestController extends Controller
             $asset = MediaAsset::create([
                 'upload_batch_id' => $batch->id,
                 'user_id' => $user->id,
-                'title' => $currentMetadata['title'] ?? $originalName,
-                'description' => $currentMetadata['description'] ?? null,
+                'title' => !empty($currentMetadata['title']) ? $currentMetadata['title'] : $originalName,
+                'description' => !empty($currentMetadata['description']) ? $currentMetadata['description'] : null,
                 'file_path' => $path,
                 'original_name' => $originalName,
                 'mime_type' => $mimeType,
                 'file_size' => $file->getSize(),
                 'status' => 'uploaded',
-                'category' => $currentMetadata['category'] ?? null,
-                'tags' => $currentMetadata['tags'] ?? [],
-                'date_taken' => $currentMetadata['date_taken'] ?? $extractedDateTaken,
-                'author' => $currentMetadata['author'] ?? $extractedAuthor,
-                'location' => $currentMetadata['location'] ?? $extractedLocation,
+                'category' => !empty($currentMetadata['category']) ? $currentMetadata['category'] : null,
+                'date_taken' => !empty($currentMetadata['date_taken']) ? $currentMetadata['date_taken'] : $extractedDateTaken,
+                'author' => !empty($currentMetadata['author']) ? $currentMetadata['author'] : $extractedAuthor,
+                'location' => !empty($currentMetadata['location']) ? $currentMetadata['location'] : $extractedLocation,
                 'exif_data' => $exifData,
             ]);
+
+            // Sync tags via the polymorphic relation
+            $tagsToSync = $currentMetadata['tags'] ?? [];
+            if (!empty($tagsToSync)) {
+                $tagIds = [];
+                foreach ((array)$tagsToSync as $tagName) {
+                    $slug = \Illuminate\Support\Str::slug($tagName);
+                    $tagModel = \App\Models\Tag::firstOrCreate(
+                        ['slug' => $slug],
+                        ['name' => ucfirst($tagName)]
+                    );
+                    $tagIds[] = $tagModel->id;
+                }
+                $asset->tags()->sync($tagIds);
+            }
 
                 $savedAssets[] = $asset;
                 $batch->increment('processed_files');

@@ -237,4 +237,119 @@ PROMPT;
 
         return $context ?: 'No hay bloques aún';
     }
+
+    /**
+     * Método para generar texto a partir de un texto y una imagen (Multimodal)
+     */
+    private function generateTextWithImage(string $prompt, string $imagePath, string $mimeType): string
+    {
+        $url = $this->apiUrl . '?key=' . $this->apiKey;
+        
+        $imageData = base64_encode(file_get_contents($imagePath));
+
+        $data = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                        [
+                            'inlineData' => [
+                                'mimeType' => $mimeType,
+                                'data' => $imageData
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'maxOutputTokens' => (int) config('services.gemini.max_tokens', 2048),
+                'temperature' => 0.7,
+            ]
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            \Log::error('Gemini Multimodal API Error', ['response' => $response, 'code' => $httpCode]);
+            throw new \Exception('Error al comunicarse con Gemini API (HTTP ' . $httpCode . ')');
+        }
+
+        $result = json_decode($response, true);
+        
+        if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+            return $result['candidates'][0]['content']['parts'][0]['text'];
+        }
+
+        throw new \Exception('Respuesta inesperada de Gemini API');
+    }
+
+    /**
+     * Generar etiquetas (Tags) para un Media Asset basado en su imagen y contexto.
+     */
+    public function generateTagsForMedia(string $title, ?string $imagePath = null, ?string $mimeType = null, string $description = '', string $category = '', int $limit = 5): array
+    {
+        $contextText = "Título: {$title}\n";
+        if (!empty($description)) {
+            $contextText .= "Descripción: {$description}\n";
+        }
+        if (!empty($category)) {
+            $contextText .= "Categoría: {$category}\n";
+        }
+
+        $prompt = <<<PROMPT
+Actúa como un catalogador experto de medios visuales para una universidad.
+A continuación, analizarás los metadatos y (si se proporciona) la imagen visual adjunta.
+Sugiere hasta {$limit} etiquetas clave (keywords) en una sola palabra o frases muy cortas.
+Las etiquetas MÁGICAS DEBEN DESCRIBIR LO QUE SE VE FÍSICAMENTE EN LA IMAGEN (ej: 'auditorio', 'profesor', 'alumnos', 'tecnología', 'diploma'). No te límites solo al texto. Deben estar en español.
+
+Datos del archivo:
+{$contextText}
+
+Responde en formato JSON estrictamente como un array de strings puras usando este esquema:
+[
+  "evento",
+  "estudiantes",
+  "universidad",
+  "graduación"
+]
+PROMPT;
+
+        try {
+            if ($imagePath && file_exists($imagePath) && $mimeType) {
+                $response = $this->generateTextWithImage($prompt, $imagePath, $mimeType);
+            } else {
+                // Fallback to text-only if no valid image is provided
+                $response = $this->generateText($prompt);
+            }
+            
+            $response = str_replace(['```json', '```'], '', $response);
+            $json = json_decode($response, true);
+            
+            if (is_array($json)) {
+                // Limpiar y limitar
+                $cleanTags = array_filter(array_map(function($tag) {
+                    return strtolower(trim($tag));
+                }, $json));
+                
+                return array_slice($cleanTags, 0, $limit);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error generating tags with Gemini', ['error' => $e->getMessage()]);
+        }
+        
+        return [];
+    }
 }

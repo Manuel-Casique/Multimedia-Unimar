@@ -157,4 +157,83 @@ class AIController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Generar etiquetas automáticas para un MediaAsset
+     * POST /api/ai/media/{id}/tags
+     */
+    public function generateTagsForMedia($id): JsonResponse
+    {
+        try {
+            $media = \App\Models\MediaAsset::findOrFail($id);
+
+            $imagePath = storage_path('app/public/' . str_replace('public/', '', $media->file_path));
+            
+            if (!file_exists($imagePath)) {
+                $imagePath = null;
+            }
+
+            $tags = $this->gemini->generateTagsForMedia(
+                title: $media->title ?? '',
+                imagePath: $imagePath,
+                mimeType: $media->mime_type ?? 'image/jpeg',
+                description: $media->description ?? '',
+                category: $media->category ?? ''
+            );
+
+            return response()->json([
+                'tags' => $tags,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al generar etiquetas',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Analizar imagen cruda en Base64 desde el frontend ANTES de subirla
+     * POST /api/ai/media/analyze-base64
+     */
+    public function analyzeBase64(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image_base64' => 'required|string',
+            'mime_type' => 'required|string',
+            'title' => 'nullable|string|max:200',
+            'description' => 'nullable|string|max:1000',
+            'category' => 'nullable|string|max:100',
+        ]);
+
+        try {
+            // Guardar temporalmente la imagen base64 para pasarla al GeminiService
+            $base64Data = preg_replace('#^data:image/\w+;base64,#i', '', $validated['image_base64']);
+            $tempImage = tempnam(sys_get_temp_dir(), 'gemini_img_');
+            file_put_contents($tempImage, base64_decode($base64Data));
+
+            $tags = $this->gemini->generateTagsForMedia(
+                title: $validated['title'] ?? 'Sin título',
+                imagePath: $tempImage,
+                mimeType: $validated['mime_type'],
+                description: $validated['description'] ?? '',
+                category: $validated['category'] ?? '',
+                limit: 5
+            );
+
+            // Eliminar archivo temporal
+            if (file_exists($tempImage)) {
+                unlink($tempImage);
+            }
+
+            return response()->json([
+                'tags' => $tags,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al analizar imagen con IA',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

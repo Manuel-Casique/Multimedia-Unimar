@@ -32,11 +32,6 @@ class Publication extends Model
         'publication_date' => 'date',
     ];
 
-    public function blocks()
-    {
-        return $this->hasMany(PublicationBlock::class)->orderBy('order');
-    }
-
     public function authors()
     {
         return $this->belongsToMany(User::class, 'publication_author');
@@ -45,6 +40,16 @@ class Publication extends Model
     public function types()
     {
         return $this->belongsToMany(PublicationType::class, 'publication_publication_type');
+    }
+
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    public function mediaAssets()
+    {
+        return $this->belongsToMany(MediaAsset::class, 'media_asset_publication');
     }
 
     public function analytics()

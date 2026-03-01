@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Gallery Routes
     Route::get('/media', [MediaController::class, 'index']);
     Route::delete('/media/batch', [MediaController::class, 'destroyBatch']);
+    Route::put('/media/{id}', [MediaController::class, 'update']);
     Route::delete('/media/{media}', [MediaController::class, 'destroy']);
 
     // Dashboard & Settings
@@ -53,4 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/publications', [PublicationController::class, 'store']);
     Route::put('/publications/{id}', [PublicationController::class, 'update']);
     Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
+
+    // AI Integrations
+    Route::post('/ai/media/{id}/tags', [\App\Http\Controllers\AIController::class, 'generateTagsForMedia']);
+    Route::post('/ai/media/analyze-base64', [\App\Http\Controllers\AIController::class, 'analyzeBase64']);
 });

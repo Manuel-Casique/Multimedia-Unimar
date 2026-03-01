@@ -72,8 +72,16 @@ export default function GalleryPage() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
   
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<Partial<MediaAsset>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   // View mode state
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
 
   const CATEGORIES = [
     { value: 'noticia', label: 'Noticia' },
@@ -137,12 +145,128 @@ export default function GalleryPage() {
 
   const openViewer = (item: MediaAsset) => {
     setSelectedMedia(item);
+    setEditData({
+      title: item.title || '',
+      description: item.description || '',
+      category: item.category || '',
+      author: item.author || '',
+      location: item.location || '',
+      tags: typeof item.tags === 'string' 
+        // fallback if it somehow arrives as raw string array
+        ? item.tags 
+        : Array.isArray(item.tags) 
+          ? item.tags.map((t: any) => typeof t === 'string' ? t : t.name) 
+          : []
+    } as any);
+    setIsEditing(false);
     setViewerOpen(true);
   };
 
   const closeViewer = () => {
     setViewerOpen(false);
     setSelectedMedia(null);
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!selectedMedia) return;
+    setIsSaving(true);
+    try {
+      // Formatear tags como array si es un string (separado por comas)
+      let finalTags: string[] = [];
+      const tagsSource: any = editData.tags;
+      if (typeof tagsSource === 'string') {
+        finalTags = tagsSource.split(',').map((t: string) => t.trim()).filter(Boolean);
+      } else if (Array.isArray(tagsSource)) {
+        finalTags = tagsSource;
+      }
+
+      const response = await api.put(`/media/${selectedMedia.id}`, {
+        ...editData,
+        tags: finalTags
+      });
+
+      // Update local state
+      const updatedMedia = response.data.media;
+      setMedia(prev => prev.map(m => m.id === updatedMedia.id ? updatedMedia : m));
+      setSelectedMedia(updatedMedia);
+      
+      MySwal.fire({
+        icon: 'success',
+        title: 'Guardado',
+        text: 'Los cambios se han guardado correctamente.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('Error saving media:', error);
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'No se pudieron guardar los cambios.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fileToBase64Url = async (url: string): Promise<string> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const generateAITags = async () => {
+    if (!selectedMedia) return;
+    setIsAiLoading(true);
+    try {
+      // Utilizamos el endpoint que analiza la imagen directamente desde el backend
+      const response = await api.post(`/ai/media/${selectedMedia.id}/tags`);
+
+      if (response.data && response.data.tags) {
+        let currentTags: string[] = [];
+        const tagsSource: any = editData.tags;
+        if (typeof tagsSource === 'string') {
+          currentTags = tagsSource.split(',').map((t: string) => t.trim()).filter(Boolean);
+        } else if (Array.isArray(tagsSource)) {
+          currentTags = tagsSource;
+        }
+        
+        const aiTags = response.data.tags;
+        const combinedTags = Array.from(new Set([...currentTags, ...aiTags]));
+        
+        setEditData(prev => ({
+          ...prev,
+          tags: combinedTags
+        }));
+
+        MySwal.fire({
+          icon: 'success',
+          title: 'Análisis IA',
+          text: `Gemini sugirió ${aiTags.length} etiquetas.`,
+          timer: 1500,
+          showConfirmButton: false,
+          customClass: { popup: 'rounded-2xl border border-unimar-surface shadow-xl' }
+        });
+      }
+    } catch (error) {
+      console.error('AI error:', error);
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error de IA',
+        text: 'Nuestra IA se encuentra ocupada o hubo un problema al analizar la imagen.',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   // Get flat list of all media for navigation
@@ -700,17 +824,51 @@ export default function GalleryPage() {
             </div>
 
             {/* Right: Metadata panel */}
-            <div className="lg:w-80 w-full bg-slate-900 rounded-xl p-5 overflow-y-auto max-h-[80vh] flex-shrink-0">
-              <h2 className="text-xl font-bold text-white mb-4 truncate" title={selectedMedia.title}>
-                {selectedMedia.title}
-              </h2>
+            <div className="lg:w-80 w-full bg-slate-900 rounded-xl p-5 overflow-y-auto max-h-[80vh] flex-shrink-0 flex flex-col">
               
-              {selectedMedia.description && (
+              {/* Header with Edit Toggle */}
+              <div className="flex justify-between items-start mb-4">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editData.title}
+                    onChange={(e) => setEditData({...editData, title: e.target.value})}
+                    className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-3 py-2 text-lg font-bold focus:outline-none focus:border-[#30669a]"
+                    placeholder="Título del archivo"
+                  />
+                ) : (
+                  <h2 className="text-xl font-bold text-white pr-2 truncate" title={selectedMedia.title}>
+                    {selectedMedia.title}
+                  </h2>
+                )}
+
+                {isAdmin && !isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex-shrink-0"
+                    title="Editar metadatos"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              {/* Description */}
+              {isEditing ? (
+                <textarea
+                  value={editData.description}
+                  onChange={(e) => setEditData({...editData, description: e.target.value})}
+                  className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-[#30669a] min-h-[80px]"
+                  placeholder="Descripción..."
+                />
+              ) : selectedMedia.description ? (
                 <p className="text-white/70 text-sm mb-4 leading-relaxed">{selectedMedia.description}</p>
-              )}
+              ) : null}
 
               {/* Metadata grid */}
-              <div className="space-y-3">
+              <div className="space-y-3 flex-1">
                 {/* Category */}
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -718,9 +876,22 @@ export default function GalleryPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
                     </svg>
                   </div>
-                  <div>
-                    <p className="text-xs text-white/50">Categoría</p>
-                    <p className="text-sm text-white font-medium capitalize">{selectedMedia.category || 'Sin categoría'}</p>
+                  <div className="flex-1">
+                    <p className="text-xs text-white/50 mb-1">Categoría</p>
+                    {isEditing ? (
+                      <select
+                        value={editData.category}
+                        onChange={(e) => setEditData({...editData, category: e.target.value})}
+                        className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-[#30669a]"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {CATEGORIES.map(cat => (
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm text-white font-medium capitalize">{selectedMedia.category || 'Sin categoría'}</p>
+                    )}
                   </div>
                 </div>
 
@@ -731,9 +902,18 @@ export default function GalleryPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <div>
-                    <p className="text-xs text-white/50">Autor</p>
-                    <p className="text-sm text-white font-medium">{selectedMedia.author || 'Desconocido'}</p>
+                  <div className="flex-1">
+                    <p className="text-xs text-white/50 mb-1">Autor</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editData.author}
+                        onChange={(e) => setEditData({...editData, author: e.target.value})}
+                        className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-[#30669a]"
+                      />
+                    ) : (
+                      <p className="text-sm text-white font-medium">{selectedMedia.author || 'Desconocido'}</p>
+                    )}
                   </div>
                 </div>
 
@@ -745,9 +925,18 @@ export default function GalleryPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
-                  <div>
-                    <p className="text-xs text-white/50">Ubicación</p>
-                    <p className="text-sm text-white font-medium">{selectedMedia.location || 'Sin ubicación'}</p>
+                  <div className="flex-1">
+                    <p className="text-xs text-white/50 mb-1">Ubicación</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editData.location}
+                        onChange={(e) => setEditData({...editData, location: e.target.value})}
+                        className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-[#30669a]"
+                      />
+                    ) : (
+                      <p className="text-sm text-white font-medium">{selectedMedia.location || 'Sin ubicación'}</p>
+                    )}
                   </div>
                 </div>
 
@@ -768,61 +957,130 @@ export default function GalleryPage() {
                   </div>
                 </div>
 
-                <hr className="border-white/10 my-3" />
+                <hr className="border-white/10 my-4" />
 
                 {/* Technical info */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-xs text-white/50">Formato</p>
-                    <p className="text-sm text-white font-medium">{getFormatLabel(selectedMedia.mime_type)}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-xs text-white/50">Tamaño</p>
-                    <p className="text-sm text-white font-medium">{selectedMedia.formatted_size}</p>
-                  </div>
-                  {selectedMedia.width && selectedMedia.height && (
-                    <>
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-xs text-white/50">Dimensiones</p>
-                        <p className="text-sm text-white font-medium">{selectedMedia.width}×{selectedMedia.height}</p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-3">
-                        <p className="text-xs text-white/50">Orientación</p>
-                        <p className="text-sm text-white font-medium">{getOrientation(selectedMedia.width, selectedMedia.height)}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Tags */}
-                {selectedMedia.tags && selectedMedia.tags.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-xs text-white/50 mb-2">Etiquetas</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedMedia.tags.map((tag, i) => (
-                        <span key={i} className="text-xs bg-[#30669a]/50 text-white px-2.5 py-1 rounded-full">
-                          {tag}
-                        </span>
-                      ))}
+                {!isEditing && (
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-white/5 rounded-lg p-3">
+                      <p className="text-xs text-white/50">Formato</p>
+                      <p className="text-sm text-white font-medium">{getFormatLabel(selectedMedia.mime_type)}</p>
                     </div>
+                    <div className="bg-white/5 rounded-lg p-3">
+                      <p className="text-xs text-white/50">Tamaño</p>
+                      <p className="text-sm text-white font-medium">{selectedMedia.formatted_size}</p>
+                    </div>
+                    {selectedMedia.width && selectedMedia.height && (
+                      <>
+                        <div className="bg-white/5 rounded-lg p-3">
+                          <p className="text-xs text-white/50">Dimensiones</p>
+                          <p className="text-sm text-white font-medium">{selectedMedia.width}×{selectedMedia.height}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-3">
+                          <p className="text-xs text-white/50">Orientación</p>
+                          <p className="text-sm text-white font-medium">{getOrientation(selectedMedia.width, selectedMedia.height)}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
+
+                {/* Tags */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-white/50">Etiquetas</p>
+                    {isEditing && selectedMedia.mime_type.startsWith('image/') && (
+                      <button 
+                        onClick={generateAITags}
+                        disabled={isAiLoading}
+                        className="text-[10px] flex items-center gap-1 text-purple-300 hover:text-purple-200 bg-purple-900/40 hover:bg-purple-800/60 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                        title="Generar etiquetas con IA"
+                      >
+                        {isAiLoading ? (
+                          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                        )}
+                        Auto IA
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isEditing ? (
+                    <div>
+                      <input
+                        type="text"
+                        value={Array.isArray(editData.tags) ? editData.tags.join(', ') : editData.tags}
+                        onChange={(e) => setEditData({...editData, tags: e.target.value as any})}
+                        placeholder="separadas, por, comas"
+                        className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-[#30669a]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMedia.tags && selectedMedia.tags.length > 0 ? (
+                        selectedMedia.tags.map((tag: any, i) => (
+                          <span key={i} className="text-xs bg-[#30669a]/50 text-white px-2.5 py-1 rounded-full">
+                            {typeof tag === 'string' ? tag : tag.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-white/30 italic">Sin etiquetas</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Download button */}
-              <a
-                href={getMediaUrl(selectedMedia)}
-                download={selectedMedia.title || 'archivo'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full mt-6 px-4 py-3 bg-[#30669a] hover:bg-[#255080] text-white font-medium rounded-xl transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Descargar archivo
-              </a>
+              {/* Action buttons at the bottom */}
+              <div className="mt-6 pt-4 border-t border-white/10">
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="flex-1 py-2.5 bg-[#30669a] hover:bg-[#255080] text-white font-medium rounded-lg transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isSaving ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      Guardar
+                    </button>
+                  </div>
+                ) : (
+                  <a
+                    href={getMediaUrl(selectedMedia)}
+                    download={selectedMedia.title || 'archivo'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#30669a] hover:bg-[#255080] text-white font-medium rounded-xl transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Descargar archivo
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>
