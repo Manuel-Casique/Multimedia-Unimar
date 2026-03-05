@@ -42,10 +42,9 @@ interface StatsData {
     audio?: number;
     other?: number;
   };
-  category_data: Array<{ name: string; count: number }>;
   timeline_data: Array<{ date: string; fullDate: string; count: number }>;
-  author_data: Array<{ name: string; count: number }>;
   hourly_data: Array<{ hour: string; count: number }>;
+  author_distribution?: Array<{ name: string; count: number }>;
 }
 
 const COLORS = ['#30669a', '#22c55e', '#a855f7', '#f59e0b', '#ef4444'];
@@ -100,9 +99,7 @@ export default function StatsPage() {
         total_size: 0,
         total_size_formatted: '0 KB',
         type_counts: {},
-        category_data: [],
         timeline_data: [],
-        author_data: [],
         hourly_data: []
       });
     } finally {
@@ -143,6 +140,9 @@ export default function StatsPage() {
     name: name === 'image' ? 'Imágenes' : name === 'video' ? 'Videos' : name === 'audio' ? 'Audio' : 'Otros',
     value: value || 0
   })).filter(item => item.value > 0) : [];
+
+  // Prepare author distribution data
+  const authorData = stats?.author_distribution || [];
 
   // Calculate totals for summary cards
   const totalFiles = stats?.total_files || 0;
@@ -319,7 +319,7 @@ export default function StatsPage() {
                         fill="#8884d8"
                         paddingAngle={5}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                       >
                         {pieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -343,48 +343,6 @@ export default function StatsPage() {
 
           {/* Charts - Row 2 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Author Distribution */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribución por Autor</h3>
-              <div className="h-80">
-                {stats?.author_data && stats.author_data.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.author_data} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis type="number" allowDecimals={false} />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        width={100}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#fff', 
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px'
-                        }}
-                        formatter={(value: number) => [value, 'Archivos']}
-                      />
-                      <Bar 
-                        dataKey="count" 
-                        fill="#22c55e" 
-                        radius={[0, 4, 4, 0]}
-                        animationDuration={800}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400">
-                    <div className="text-center">
-                      <FontAwesomeIcon icon={faPhotoFilm} className="text-4xl mb-2 opacity-50" />
-                      <p>No hay datos de autores</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Hourly Activity */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-semibold text-slate-700 mb-4">Actividad por Hora del Día</h3>
@@ -424,6 +382,47 @@ export default function StatsPage() {
                     <div className="text-center">
                       <FontAwesomeIcon icon={faPhotoFilm} className="text-4xl mb-2 opacity-50" />
                       <p>No hay datos de actividad</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Author Distribution */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribución por Autor</h3>
+              <div className="h-80">
+                {authorData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={authorData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
+                      <XAxis type="number" allowDecimals={false} />
+                      <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#fff', 
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number) => [value, 'Archivos subidos']}
+                      />
+                      <Bar 
+                        dataKey="count" 
+                        fill="#30669a" 
+                        radius={[0, 4, 4, 0]} 
+                        barSize={30}
+                      >
+                        {authorData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400">
+                    <div className="text-center">
+                      <FontAwesomeIcon icon={faPhotoFilm} className="text-4xl mb-2 opacity-50" />
+                      <p>No hay autores registrados</p>
                     </div>
                   </div>
                 )}

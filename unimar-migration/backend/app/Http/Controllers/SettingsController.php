@@ -23,7 +23,7 @@ class SettingsController extends Controller
 
         return response()->json([
             'message' => 'Perfil actualizado correctamente',
-            'user' => $user
+            'user' => $user->load('roles')
         ]);
     }
 }

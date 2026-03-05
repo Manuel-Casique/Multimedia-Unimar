@@ -5,35 +5,25 @@ import { useIngestStore } from '@/stores/useIngestStore';
 import api from '@/lib/api';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import TagCombobox, { Tag } from '@/components/TagCombobox';
+import CategoryCombobox, { Category } from '@/components/CategoryCombobox';
+import LocationCombobox from '@/components/LocationCombobox';
 
 const MySwal = withReactContent(Swal);
-
-const CATEGORIES = [
-  { value: '', label: 'Seleccionar categoría' },
-  { value: 'noticia', label: 'Noticia' },
-  { value: 'evento', label: 'Evento' },
-  { value: 'academico', label: 'Académico' },
-  { value: 'deportivo', label: 'Deportivo' },
-  { value: 'cultural', label: 'Cultural' },
-  { value: 'institucional', label: 'Institucional' },
-  { value: 'otro', label: 'Otro' },
-];
 
 export default function IngestSidebar() {
   const { files, selectedIds, updateSelectedMetadata, removeSelected, isUploading } = useIngestStore();
   
   const [bulkData, setBulkData] = useState<{
-    category: string;
-    tags: string;
+    category: Category | null;
+    tags: Tag[];
     description?: string;
-    author?: string;
     date_taken?: string;
     location?: string;
   }>({
-    category: '',
-    tags: '',
+    category: null,
+    tags: [],
     description: '',
-    author: '',
     date_taken: '',
     location: '',
   });
@@ -42,29 +32,33 @@ export default function IngestSidebar() {
   const hasSelection = selectedFiles.length > 0;
   const hasFiles = files.length > 0;
   const isSingleSelection = selectedFiles.length === 1;
+  const isSelectedImage = hasSelection && selectedFiles[0].file.type.startsWith('image/');
 
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Fecha de hoy en formato YYYY-MM-DD (para min y valor por defecto)
+  const todayStr = new Date().toISOString().split('T')[0];
 
   // Load metadata when selecting a SINGLE file
   useEffect(() => {
     if (isSingleSelection) {
       const file = selectedFiles[0];
       setBulkData({
-        category: file.category || '',
-        tags: file.tags?.join(', ') || '',
+        category: null,
+        tags: [],
         description: file.description || '',
-        author: file.author || '',
-        date_taken: file.date_taken || '',
+        date_taken: file.date_taken
+          ? file.date_taken.split('T')[0]
+          : todayStr,
         location: file.location || '',
       });
     } else {
-      // Clear fields when multiple or none selected
       setBulkData({
-        category: '',
-        tags: '',
+        category: null,
+        tags: [],
         description: '',
-        author: '',
-        date_taken: '',
+        date_taken: todayStr,
         location: '',
       });
     }
@@ -80,13 +74,11 @@ export default function IngestSidebar() {
     });
   };
 
-  const generateAITags = async () => {
+  // Genera título y descripción con IA para el archivo seleccionado
+  const generateAIMetadata = async () => {
     if (!hasSelection) return;
-
     setIsAiLoading(true);
-    
     try {
-      // Tomamos el primer archivo de la selección (en caso de q sean múltiples tomaremos el primero como referencia visual)
       const fileContext = selectedFiles[0];
       const base64Data = await fileToBase64(fileContext.file);
 
@@ -95,40 +87,51 @@ export default function IngestSidebar() {
         mime_type: fileContext.file.type || 'image/jpeg',
         title: fileContext.title || '',
         description: bulkData.description || '',
-        category: bulkData.category || ''
       });
 
-      if (response.data && response.data.tags) {
-        // Combinamos tags existentes con los nuevos sugeridos por la IA, evitando duplicados
-        const currentTags = bulkData.tags ? bulkData.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-        const aiTags = response.data.tags;
-        
-        const combinedTags = Array.from(new Set([...currentTags, ...aiTags]));
-        
-        setBulkData(prev => ({
-          ...prev,
-          tags: combinedTags.join(', ')
-        }));
+      if (response.data) {
+        const aiTitle = response.data.title || fileContext.title;
+        const aiDescription = response.data.description || bulkData.description;
+
+        // Actualizar AMBOS en el store y en bulkData de forma sincronizada
+        // para evitar el race condition con el useEffect
+        if (isSingleSelection) {
+          const updates: any = {};
+          if (response.data.title) updates.title = aiTitle;
+          if (response.data.description) updates.description = aiDescription;
+          useIngestStore.getState().updateFileMetadata(fileContext.id, updates);
+        }
+
+        // Actualizar bulkData directamente (la descripción visible en el textarea)
+        // Usamos un timeout mínimo para que el useEffect no la sobrescriba
+        // porque updateFileMetadata triggerea la dependencia [files] del useEffect
+        setTimeout(() => {
+          setBulkData(prev => ({
+            ...prev,
+            description: aiDescription,
+          }));
+        }, 50);
 
         MySwal.fire({
           icon: 'success',
-          title: 'IA Análisis Completado',
-          text: `Gemini ha encontrado ${aiTags.length} etiquetas sugeridas.`,
-          timer: 2000,
+          title: 'Auto IA completado',
+          html: response.data.title
+            ? `<b>Título:</b> ${aiTitle}<br><b>Descripción</b> generada correctamente.`
+            : 'Descripción generada correctamente.',
+          timer: 3000,
           showConfirmButton: false,
-          customClass: {
-            popup: 'rounded-2xl border border-unimar-surface shadow-xl',
-          }
+          customClass: { popup: 'rounded-2xl border border-unimar-surface shadow-xl' },
         });
       }
     } catch (error) {
-      console.error('Error in AI Tag Generation:', error);
+      console.error('Error in AI Metadata Generation:', error);
       MySwal.fire({
         icon: 'error',
         title: 'Error de IA',
-        text: 'Nuestra IA se encuentra ocupada o hubo un problema al analizar la imagen.',
+        text: 'Hubo un problema al analizar la imagen con IA.',
         timer: 3000,
-        showConfirmButton: false
+        showConfirmButton: false,
+        customClass: { popup: 'rounded-2xl border border-unimar-surface shadow-xl' },
       });
     } finally {
       setIsAiLoading(false);
@@ -137,11 +140,8 @@ export default function IngestSidebar() {
 
   const handleApplyToSelected = () => {
     const updates: any = {};
-    
-    if (bulkData.category) updates.category = bulkData.category;
-    if (bulkData.tags.trim()) updates.tags = bulkData.tags.split(',').map((t) => t.trim()).filter(Boolean);
+    if (bulkData.tags.length > 0) updates.tags = bulkData.tags.map(t => t.name);
     if (bulkData.description) updates.description = bulkData.description;
-    if (bulkData.author) updates.author = bulkData.author;
     if (bulkData.date_taken) updates.date_taken = bulkData.date_taken;
     if (bulkData.location) updates.location = bulkData.location;
 
@@ -167,17 +167,46 @@ export default function IngestSidebar() {
     // Safety check
     if (filesToUpload.length === 0) return;
 
+    // Validación: cada archivo debe tener título no vacío y al menos 1 tag
+    // Consideramos tanto los tags ya aplicados en el store como los pendientes en bulkData
+    const pendingTagNames = bulkData.tags.map(t => t.name);
+    const filesWithoutTags = filesToUpload.filter(f => {
+      const fileTags = Array.isArray(f.tags) ? f.tags : [];
+      return fileTags.length === 0 && pendingTagNames.length === 0;
+    });
+    const filesWithoutTitle = filesToUpload.filter(f => !f.title?.trim());
+
+    if (filesWithoutTitle.length > 0) {
+      MySwal.fire({
+        icon: 'warning',
+        title: 'Títulos en blanco',
+        html: `Los siguientes archivos no tienen título:<br><b>${filesWithoutTitle.map(f => f.file.name).join('<br>')}</b><br><br>Cada archivo debe tener un nombre antes de subirse.`,
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'rounded-2xl border border-unimar-surface shadow-xl' },
+      });
+      return;
+    }
+
+    if (filesWithoutTags.length > 0) {
+      MySwal.fire({
+        icon: 'warning',
+        title: 'Etiquetas requeridas',
+        html: `Los siguientes archivos no tienen etiquetas:<br><b>${filesWithoutTags.map(f => f.file.name).join('<br>')}</b><br><br>Selecciona al menos una etiqueta en el sidebar y haz clic en <b>"Aplicar a seleccionados"</b>, o usa el campo de Etiquetas del sidebar masivo.`,
+        confirmButtonText: 'Entendido',
+        customClass: { popup: 'rounded-2xl border border-unimar-surface shadow-xl' },
+      });
+      return;
+    }
+
     // UX FIX: Auto-apply metadata if user forgot to click "Apply"
     // Check if there is data in the form AND we have selected files (or uploading all)
     // If uploading all, we apply to ALL. If uploading selection, apply to selection.
     // Logic: If there is text in any field, assume user wants to use it.
     
-    const hasPendingChanges = 
-      bulkData.category || 
-      bulkData.tags.trim() || 
-      bulkData.description || 
-      bulkData.author || 
-      bulkData.date_taken || 
+    const hasPendingChanges =
+      bulkData.tags.length > 0 ||
+      bulkData.description ||
+      bulkData.date_taken ||
       bulkData.location;
 
     // We only auto-apply if:
@@ -191,10 +220,8 @@ export default function IngestSidebar() {
        console.log('Auto-applying pending metadata changes before upload...');
        
        const updates: any = {};
-       if (bulkData.category) updates.category = bulkData.category;
-       if (bulkData.tags.trim()) updates.tags = bulkData.tags.split(',').map((t) => t.trim()).filter(Boolean);
+       if (bulkData.tags.length > 0) updates.tags = bulkData.tags.map(t => t.name);
        if (bulkData.description) updates.description = bulkData.description;
-       if (bulkData.author) updates.author = bulkData.author;
        if (bulkData.date_taken) updates.date_taken = bulkData.date_taken;
        if (bulkData.location) updates.location = bulkData.location;
        
@@ -212,32 +239,54 @@ export default function IngestSidebar() {
 
     try {
       useIngestStore.getState().setUploading(true);
+      setUploadProgress(0);
       
-      const formData = new FormData();
-      
-      // Append files from our UPDATED local array
-      updatedFiles.forEach((file) => {
-        formData.append('files[]', file.file);
-      });
+      let totalBytes = 0;
+      updatedFiles.forEach(f => totalBytes += f.file.size);
+      let uploadedBytes = 0;
 
-      // Append metadata for each file in order
-      const filesMetadata = updatedFiles.map(file => ({
-        title: file.title,
-        description: file.description,
-        category: file.category,
-        tags: file.tags,
-        author: file.author,
-        date_taken: file.date_taken,
-        location: file.location,
-      }));
-      
-      formData.append('file_metadata', JSON.stringify(filesMetadata));
+      for (const fileData of updatedFiles) {
+        const file = fileData.file;
+        const chunkSize = 5 * 1024 * 1024; // 5MB por chunk
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        
+        // Usar crypto.randomUUID() o una alternativa sencilla
+        const fileId = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-      await api.post('/ingest/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize, file.size);
+          const chunk = file.slice(start, end);
+
+          const formData = new FormData();
+          formData.append('file', chunk);
+          formData.append('file_id', fileId);
+          formData.append('chunk_index', i.toString());
+          formData.append('total_chunks', totalChunks.toString());
+          formData.append('file_name', file.name);
+          formData.append('mime_type', file.type);
+          
+          // Enviar metadatos únicamente en el último chunk
+          if (i === totalChunks - 1) {
+            formData.append('file_metadata', JSON.stringify({
+              title: fileData.title,
+              description: fileData.description,
+              tags: fileData.tags,
+              date_taken: fileData.date_taken,
+              location: fileData.location,
+            }));
+          }
+
+          await api.post('/ingest/upload-chunk', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 0 // Evitar timeout en videos masivos
+          });
+          
+          uploadedBytes += chunk.size;
+          const percentCompleted = Math.round((uploadedBytes / totalBytes) * 100);
+          setUploadProgress(percentCompleted);
+        }
+      }
 
       // Success feedback and state cleanup
       MySwal.fire({
@@ -256,7 +305,7 @@ export default function IngestSidebar() {
       } else {
         removeSelected();
       }
-      setBulkData({ category: '', tags: '', description: '', author: '', date_taken: '', location: '' });
+      setBulkData({ category: null, tags: [], description: '', date_taken: '', location: '' });
       
     } catch (error) {
       console.error('Upload failed:', error);
@@ -294,6 +343,32 @@ export default function IngestSidebar() {
         </p>
       </div>
 
+      {/* Barra de progreso de upload */}
+      {isUploading && (
+        <div className="px-5 py-3 bg-slate-50 border-b border-slate-100">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium text-slate-600">
+              {uploadProgress < 100 ? 'Subiendo archivos...' : 'Procesando en servidor...'}
+            </span>
+            <span className="text-xs font-bold text-[#30669a]">{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-2 rounded-full transition-all duration-300 ease-out"
+              style={{
+                width: `${uploadProgress}%`,
+                background: uploadProgress === 100
+                  ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                  : 'linear-gradient(90deg, #30669a, #5b9bd5)',
+              }}
+            />
+          </div>
+          {uploadProgress === 100 && (
+            <p className="text-[10px] text-green-600 mt-1 font-medium">✓ Transferencia completa. Procesando...</p>
+          )}
+        </div>
+      )}
+
       {/* Body - White background */}
       <div className="p-5 space-y-5 bg-white">
         {!hasSelection && !hasFiles ? (
@@ -325,7 +400,7 @@ export default function IngestSidebar() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Subiendo...
+                  {uploadProgress > 0 && uploadProgress < 100 ? `Subiendo... ${uploadProgress}%` : uploadProgress === 100 ? 'Procesando...' : 'Preparando...'}
                 </span>
               ) : (
                 <>
@@ -339,96 +414,79 @@ export default function IngestSidebar() {
           </div>
         ) : (
           <>
-            {/* Category */}
-            <div className="space-y-2">
-              <label className="label-unimar">
-                Categoría
-              </label>
-              <select
-                value={bulkData.category}
-                onChange={(e) => setBulkData({ ...bulkData, category: e.target.value })}
-                className="input-unimar cursor-pointer"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+
+            {/* Categoría */}
+            <div className="space-y-1">
+              <label className="label-unimar">Categoría</label>
+              <CategoryCombobox
+                value={bulkData.category ? [bulkData.category] : []}
+                onChange={(cats) => setBulkData(prev => ({ ...prev, category: cats.length > 0 ? cats[cats.length - 1] : null, tags: [] }))}
+                placeholder="Selecciona una categoría..."
+              />
+              <p className="text-[10px] text-slate-400 italic">Las etiquetas se filtrarán por la categoría elegida.</p>
             </div>
 
-            {/* Tags */}
+            {/* Tags — Combobox con búsqueda */}
             <div className="space-y-1">
-              <label className="label-unimar flex justify-between items-center">
-                <span>Etiquetas</span>
-                <button 
-                  onClick={generateAITags}
-                  disabled={isAiLoading || !hasSelection}
-                  className="text-xs flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors disabled:opacity-50"
-                  title="Generar etiquetas mágicas con IA"
-                >
-                  {isAiLoading ? (
-                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  )}
-                  Auto IA
-                </button>
+              <label className="label-unimar">
+                Etiquetas
               </label>
-              <input
-                type="text"
+              <TagCombobox
                 value={bulkData.tags}
-                onChange={(e) => setBulkData({ ...bulkData, tags: e.target.value })}
-                placeholder="Añadir etiquetas..."
-                className="input-unimar"
+                onChange={(tags) => setBulkData({ ...bulkData, tags })}
+                placeholder="Buscar etiqueta..."
+                categoryId={bulkData.category?.id ?? null}
               />
-              <p className="text-[10px] text-slate-400 italic">Ej: graduación, evento, 2026 (separadas por comas)</p>
+              <p className="text-[10px] text-slate-400 italic">Selecciona del catálogo. Los tags se crean desde Configuración.</p>
             </div>
 
             {/* Nueva Metadata Bulk */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
                <div className="space-y-1">
-                 <label className="label-unimar">Autor</label>
+                 <label className="label-unimar">Fecha del evento</label>
                  <input
-                   type="text"
-                   value={bulkData.author || ''}
-                   onChange={(e) => setBulkData({ ...bulkData, author: e.target.value })}
-                   className="input-unimar"
-                   placeholder="Fotógrafo..."
-                 />
-                 <p className="text-[10px] text-slate-400 italic">Ej: Juan Pérez, Prensa UNIMAR</p>
-               </div>
-               <div className="space-y-1">
-                 <label className="label-unimar">Fecha</label>
-                 <input
-                   type="datetime-local"
-                   value={bulkData.date_taken ? new Date(bulkData.date_taken).toISOString().slice(0, 16) : ''}
+                   type="date"
+                   value={bulkData.date_taken || todayStr}
+                   min={todayStr}
                    onChange={(e) => setBulkData({ ...bulkData, date_taken: e.target.value })}
                    className="input-unimar"
                  />
-                 <p className="text-[10px] text-slate-400 italic">Ej: 27/01/2026 10:30</p>
+                 <p className="text-[10px] text-slate-400 italic">Por defecto: hoy. No se pueden seleccionar fechas pasadas.</p>
                </div>
             </div>
 
             <div className="space-y-1">
                <label className="label-unimar">Ubicación</label>
-               <input
-                 type="text"
+               <LocationCombobox
                  value={bulkData.location || ''}
-                 onChange={(e) => setBulkData({ ...bulkData, location: e.target.value })}
-                 className="input-unimar"
-                 placeholder="Lugar..."
+                 onChange={(val) => setBulkData({ ...bulkData, location: val })}
+                 placeholder="Buscar ubicación..."
                />
-               <p className="text-[10px] text-slate-400 italic">Ej: Auditorio UNIMAR, Sede Porlamar</p>
+               <p className="text-[10px] text-slate-400 italic">Selecciona del catálogo o escribe una ubicación.</p>
             </div>
 
             <div className="space-y-1">
-               <label className="label-unimar">Descripción {!isSingleSelection && 'Masiva'}</label>
+               <label className="label-unimar flex justify-between items-center">
+                 <span>Descripción {!isSingleSelection && 'Masiva'}</span>
+                 <button
+                   onClick={generateAIMetadata}
+                   disabled={isAiLoading || !hasSelection || !isSelectedImage}
+                   className="text-xs flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-md transition-colors disabled:opacity-50 disabled:grayscale"
+                   title={!isSelectedImage ? "Esta función solo está disponible para imágenes" : "Generar título y descripción con IA"}
+                 >
+                   {isAiLoading ? (
+                     <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                     </svg>
+                   ) : (
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                     </svg>
+                   )}
+                   Auto IA
+                 </button>
+               </label>
                <textarea
                  value={bulkData.description || ''}
                  onChange={(e) => setBulkData({ ...bulkData, description: e.target.value })}
@@ -441,7 +499,7 @@ export default function IngestSidebar() {
             {/* Apply Button */}
             <button
               onClick={handleApplyToSelected}
-              disabled={!bulkData.category && !bulkData.tags.trim() && !bulkData.description && !bulkData.author && !bulkData.location && !bulkData.date_taken}
+              disabled={bulkData.tags.length === 0 && !bulkData.description && !bulkData.location && !bulkData.date_taken}
               className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Aplicar a seleccionados

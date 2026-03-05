@@ -51,7 +51,7 @@ function FileItem({ file, isSelected, onToggle, onEdit }: FileItemProps) {
       className={`
         group relative flex items-center gap-4 p-3 rounded-xl border transition-all duration-200 cursor-pointer
         ${isSelected
-          ? 'bg-unimar-light/10 border-unimar-light/30 ring-2 ring-unimar-light/20'
+          ? 'bg-[#30669a]/10 border-[#30669a]/30 ring-2 ring-[#30669a]/20'
           : 'bg-white/60 border-slate-100 hover:bg-slate-50/80 hover:border-slate-200'
         }
       `}
@@ -61,7 +61,7 @@ function FileItem({ file, isSelected, onToggle, onEdit }: FileItemProps) {
       <div className="relative flex-shrink-0">
         <div className={`
           w-5 h-5 rounded border-2 flex items-center justify-center transition-all
-          ${isSelected ? 'bg-unimar-light border-unimar-light' : 'border-slate-300 bg-white'}
+          ${isSelected ? 'bg-[#30669a] border-[#30669a]' : 'border-slate-300 bg-white'}
         `}>
           {isSelected && (
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,7 +90,7 @@ function FileItem({ file, isSelected, onToggle, onEdit }: FileItemProps) {
           </p>
           <button
             onClick={onEdit}
-            className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-unimar-light transition-all opacity-0 group-hover/edit:opacity-100"
+            className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-[#30669a] transition-all opacity-0 group-hover/edit:opacity-100"
             title="Editar detalles"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,19 +102,13 @@ function FileItem({ file, isSelected, onToggle, onEdit }: FileItemProps) {
           <span>{formatFileSize(file.size)}</span>
           <span>•</span>
           <span>{file.type.split('/')[1]?.toUpperCase() || 'FILE'}</span>
-          {file.category && (
-             <>
-               <span>•</span>
-               <span className="text-unimar-light font-medium">{file.category}</span>
-             </>
-          )}
         </p>
       </div>
 
       {/* Status Indicator */}
       {file.status === 'uploading' && (
         <div className="w-8 h-8 flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-unimar-light border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[#30669a] border-t-transparent rounded-full animate-spin" />
         </div>
       )}
       {file.status === 'uploaded' && (
@@ -164,7 +158,7 @@ export default function FileList({ onEdit }: FileListProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={allSelected ? deselectAll : selectAll}
-            className="text-sm font-medium text-unimar-light hover:text-unimar-dark transition-colors"
+            className="text-sm font-medium text-[#30669a] hover:text-[#265580] transition-colors"
           >
             {allSelected ? 'Deseleccionar todo' : 'Seleccionar todo'}
           </button>

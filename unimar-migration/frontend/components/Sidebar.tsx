@@ -11,13 +11,15 @@ import {
   faChartPie, 
   faCog, 
   faSignOutAlt,
-  faNewspaper
+  faNewspaper,
+  faUsers,
+  faTag
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { logout } = useAuthStore();
+  const { logout, isAdmin, isEditor } = useAuthStore();
   const { isExpanded, isPinned, setExpanded } = useSidebarStore();
 
   const handleLogout = () => {
@@ -38,31 +40,13 @@ export default function Sidebar() {
   };
 
   const navItems = [
-    {
-      label: 'Multimedia',
-      icon: faUpload,
-      href: '/ingest',
-    },
-    {
-      label: 'Galería',
-      icon: faImages,
-      href: '/gallery',
-    },
-    {
-      label: 'Publicaciones',
-      icon: faNewspaper,
-      href: '/publications',
-    },
-    {
-      label: 'Estadísticas',
-      icon: faChartPie,
-      href: '/stats',
-    },
-    {
-      label: 'Configuración',
-      icon: faCog,
-      href: '/settings',
-    },
+    { label: 'Multimedia', icon: faUpload, href: '/ingest' },
+    { label: 'Galería', icon: faImages, href: '/gallery' },
+    ...(isAdmin() || isEditor() ? [{ label: 'Publicaciones', icon: faNewspaper, href: '/publications' }] : []),
+    { label: 'Estadísticas', icon: faChartPie, href: '/stats' },
+    ...(isAdmin() ? [{ label: 'Usuarios', icon: faUsers, href: '/settings/users' }] : []),
+    ...(isAdmin() ? [{ label: 'Taxonomía', icon: faTag, href: '/settings/catalog' }] : []),
+    { label: 'Configuración', icon: faCog, href: '/settings' },
   ];
 
   return (

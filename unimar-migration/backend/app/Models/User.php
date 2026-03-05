@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +27,6 @@ class User extends Authenticatable
         'google_id',
         'avatar',
         'profile_photo_path',
-        'role',
     ];
 
     /**
@@ -74,13 +74,5 @@ class User extends Authenticatable
     public function isGoogleUser(): bool
     {
         return !empty($this->google_id);
-    }
-
-    /**
-     * Check if user has a specific role.
-     */
-    public function hasRole(string $role): bool
-    {
-        return $this->role === $role;
     }
 }

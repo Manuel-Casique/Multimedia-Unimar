@@ -15,7 +15,6 @@ class MediaAsset extends Model
         'user_id',
         'title',
         'description',
-        'category',
         'tags',
         'file_path',
         'disk',
@@ -25,7 +24,6 @@ class MediaAsset extends Model
         'file_size',
         'status',
         'date_taken',
-        'author',
         'location',
         'exif_data',
     ];

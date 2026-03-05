@@ -297,59 +297,57 @@ PROMPT;
     }
 
     /**
-     * Generar etiquetas (Tags) para un Media Asset basado en su imagen y contexto.
+     * Generar título y descripción para un Media Asset usando IA.
+     * Los tags ya NO son responsabilidad de la IA — se gestionan desde el catálogo controlado.
      */
-    public function generateTagsForMedia(string $title, ?string $imagePath = null, ?string $mimeType = null, string $description = '', string $category = '', int $limit = 5): array
+    public function generateTitleAndDescription(string $title, ?string $imagePath = null, ?string $mimeType = null, string $description = ''): array
     {
-        $contextText = "Título: {$title}\n";
+        $contextText = "Título Original: {$title}\n";
         if (!empty($description)) {
-            $contextText .= "Descripción: {$description}\n";
-        }
-        if (!empty($category)) {
-            $contextText .= "Categoría: {$category}\n";
+            $contextText .= "Descripción Original: {$description}\n";
         }
 
         $prompt = <<<PROMPT
 Actúa como un catalogador experto de medios visuales para una universidad.
-A continuación, analizarás los metadatos y (si se proporciona) la imagen visual adjunta.
-Sugiere hasta {$limit} etiquetas clave (keywords) en una sola palabra o frases muy cortas.
-Las etiquetas MÁGICAS DEBEN DESCRIBIR LO QUE SE VE FÍSICAMENTE EN LA IMAGEN (ej: 'auditorio', 'profesor', 'alumnos', 'tecnología', 'diploma'). No te límites solo al texto. Deben estar en español.
+A continuación, analizarás los metadatos base y (si se proporciona) la imagen visual adjunta.
 
-Datos del archivo:
+Tu objetivo es generar:
+1. Un 'title': título corto, descriptivo y profesional (máximo 60 caracteres).
+2. Un 'description': texto alternativo (alt text) para accesibilidad, describe literalmente lo que se ve en la imagen con un tono objetivo (máximo 180 caracteres).
+
+Datos proporcionados:
 {$contextText}
 
-Responde en formato JSON estrictamente como un array de strings puras usando este esquema:
-[
-  "evento",
-  "estudiantes",
-  "universidad",
-  "graduación"
-]
+Responde ÚNICAMENTE en formato JSON así, sin explicaciones adicionales:
+{
+  "title": "...",
+  "description": "..."
+}
 PROMPT;
 
         try {
             if ($imagePath && file_exists($imagePath) && $mimeType) {
                 $response = $this->generateTextWithImage($prompt, $imagePath, $mimeType);
             } else {
-                // Fallback to text-only if no valid image is provided
                 $response = $this->generateText($prompt);
             }
-            
-            $response = str_replace(['```json', '```'], '', $response);
+
+            $response = str_replace(['```json', '```'], '', trim($response));
             $json = json_decode($response, true);
-            
+
             if (is_array($json)) {
-                // Limpiar y limitar
-                $cleanTags = array_filter(array_map(function($tag) {
-                    return strtolower(trim($tag));
-                }, $json));
-                
-                return array_slice($cleanTags, 0, $limit);
+                return [
+                    'title'       => $json['title'] ?? '',
+                    'description' => $json['description'] ?? '',
+                ];
             }
         } catch (\Exception $e) {
-            \Log::error('Error generating tags with Gemini', ['error' => $e->getMessage()]);
+            \Log::error('Error generating title/description with Gemini', ['error' => $e->getMessage()]);
         }
-        
-        return [];
+
+        return [
+            'title'       => '',
+            'description' => '',
+        ];
     }
 }

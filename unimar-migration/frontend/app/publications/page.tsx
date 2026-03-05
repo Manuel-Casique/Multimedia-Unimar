@@ -32,17 +32,22 @@ interface Publication {
 
 export default function PublicationsPage() {
   const router = useRouter();
-  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, user, _hasHydrated, isAdmin, isEditor } = useAuthStore();
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (_hasHydrated && !isAuthenticated) {
-      router.push('/login');
-    } else if (_hasHydrated && isAuthenticated) {
-      fetchPublications();
+    if (_hasHydrated) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (!isAdmin() && !isEditor()) {
+        router.push('/dashboard');
+        Swal.fire('Acceso Denegado', 'No tienes permisos para acceder a Publicaciones.', 'error');
+      } else {
+        fetchPublications();
+      }
     }
-  }, [isAuthenticated, _hasHydrated, router]);
+  }, [isAuthenticated, _hasHydrated, isAdmin, isEditor, router]);
 
   const fetchPublications = async () => {
     try {
@@ -126,13 +131,15 @@ export default function PublicationsPage() {
         <div className="text-sm text-slate-500">
           {publications.length} publicación{publications.length !== 1 ? 'es' : ''}
         </div>
-        <button
-          onClick={() => router.push('/publications/new')}
-          className="flex items-center gap-2 px-4 py-2 bg-[#30669a] text-white rounded-lg hover:bg-[#265580] transition-colors font-medium"
-        >
-          <FontAwesomeIcon icon={faPlus} />
-          Nueva Publicación
-        </button>
+        {(isAdmin() || isEditor()) && (
+          <button
+            onClick={() => router.push('/publications/new')}
+            className="flex items-center gap-2 px-4 py-2 bg-[#30669a] text-white rounded-lg hover:bg-[#265580] transition-colors font-medium"
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            Nueva Publicación
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -199,38 +206,49 @@ export default function PublicationsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
-                      {pub.status === 'draft' && (
-                        <button
-                          onClick={() => handleStatusChange(pub.id, 'published')}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Publicar"
-                        >
-                          <FontAwesomeIcon icon={faGlobe} />
-                        </button>
+                       <button
+                         onClick={() => router.push(`/publications/view/${pub.slug}`)}
+                         className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                         title="Ver"
+                       >
+                         <FontAwesomeIcon icon={faEye} />
+                       </button>
+                      {(isAdmin() || isEditor()) && (
+                        <>
+                          {pub.status === 'draft' && (
+                            <button
+                              onClick={() => handleStatusChange(pub.id, 'published')}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Publicar"
+                            >
+                              <FontAwesomeIcon icon={faGlobe} />
+                            </button>
+                          )}
+                          {pub.status === 'published' && (
+                            <button
+                              onClick={() => handleStatusChange(pub.id, 'archived')}
+                              className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                              title="Archivar"
+                            >
+                              <FontAwesomeIcon icon={faArchive} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => router.push(`/publications/${pub.id}/edit`)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <FontAwesomeIcon icon={faEdit} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(pub.id, pub.title)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </>
                       )}
-                      {pub.status === 'published' && (
-                        <button
-                          onClick={() => handleStatusChange(pub.id, 'archived')}
-                          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="Archivar"
-                        >
-                          <FontAwesomeIcon icon={faArchive} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => router.push(`/publications/${pub.id}/edit`)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Editar"
-                      >
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(pub.id, pub.title)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Eliminar"
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
                     </div>
                   </td>
                 </tr>

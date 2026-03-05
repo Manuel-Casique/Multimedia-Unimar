@@ -7,6 +7,10 @@ use App\Http\Controllers\MediaController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\LocationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,7 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ingest Routes
     Route::post('/ingest/upload', [IngestController::class, 'upload']);
-    
+    Route::post('/ingest/upload-chunk', [IngestController::class, 'uploadChunk']);
+
     // Gallery Routes
     Route::get('/media', [MediaController::class, 'index']);
     Route::delete('/media/batch', [MediaController::class, 'destroyBatch']);
@@ -48,6 +53,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/profile', [SettingsController::class, 'updateProfile']);
     Route::post('/user/photo', [ProfileController::class, 'updatePhoto']);
 
+    // Tags & Locations — lectura para todos los autenticados
+    Route::get('/tags', [TagController::class, 'index']);
+    Route::get('/locations', [LocationController::class, 'index']);
+
     // Publications (protegidas)
     Route::get('/publications/my', [PublicationController::class, 'myPublications']);
     Route::get('/publications/{id}/edit', [PublicationController::class, 'showById']);
@@ -56,6 +65,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
 
     // AI Integrations
-    Route::post('/ai/media/{id}/tags', [\App\Http\Controllers\AIController::class, 'generateTagsForMedia']);
+    Route::post('/ai/media/{id}/metadata', [\App\Http\Controllers\AIController::class, 'generateMetadataForMedia']);
     Route::post('/ai/media/analyze-base64', [\App\Http\Controllers\AIController::class, 'analyzeBase64']);
+
+    // Admin only
+    Route::middleware('role:admin')->group(function () {
+        // Users
+        Route::get('/users', [UserController::class, 'index']);
+        Route::put('/users/{id}/role', [UserController::class, 'updateRole']);
+
+        // Tags CRUD (admin)
+        Route::post('/tags', [TagController::class, 'store']);
+        Route::put('/tags/{id}', [TagController::class, 'update']);
+        Route::delete('/tags/{id}', [TagController::class, 'destroy']);
+
+        // Categories CRUD (admin)
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::put('/categories/{id}', [CategoryController::class, 'update']);
+        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+
+        // Predefined Locations CRUD (admin)
+        Route::post('/locations', [LocationController::class, 'store']);
+        Route::put('/locations/{id}', [LocationController::class, 'update']);
+        Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
+    });
 });

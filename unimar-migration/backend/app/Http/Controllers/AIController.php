@@ -33,7 +33,7 @@ class AIController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al mejorar texto',
+                'error'   => 'Error al mejorar texto',
                 'message' => $e->getMessage(),
             ], 500);
         }
@@ -69,7 +69,7 @@ class AIController extends Controller
     public function generateSummary(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'content' => 'required|string|max:10000',
+            'content'   => 'required|string|max:10000',
             'max_words' => 'nullable|integer|min:50|max:300',
         ]);
 
@@ -89,14 +89,10 @@ class AIController extends Controller
         }
     }
 
-    /**
-     * Optimizar SEO
-     * POST /api/ai/optimize-seo
-     */
     public function optimizeSEO(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:200',
+            'title'   => 'required|string|max:200',
             'content' => 'required|string|max:10000',
         ]);
 
@@ -159,80 +155,71 @@ class AIController extends Controller
     }
 
     /**
-     * Generar etiquetas automáticas para un MediaAsset
-     * POST /api/ai/media/{id}/tags
+     * Generar título y descripción para un MediaAsset ya guardado (desde su imagen en storage)
+     * POST /api/ai/media/{id}/metadata
      */
-    public function generateTagsForMedia($id): JsonResponse
+    public function generateMetadataForMedia($id): JsonResponse
     {
         try {
             $media = \App\Models\MediaAsset::findOrFail($id);
 
             $imagePath = storage_path('app/public/' . str_replace('public/', '', $media->file_path));
-            
+
             if (!file_exists($imagePath)) {
                 $imagePath = null;
             }
 
-            $tags = $this->gemini->generateTagsForMedia(
+            $metadata = $this->gemini->generateTitleAndDescription(
                 title: $media->title ?? '',
                 imagePath: $imagePath,
                 mimeType: $media->mime_type ?? 'image/jpeg',
-                description: $media->description ?? '',
-                category: $media->category ?? ''
+                description: $media->description ?? ''
             );
 
-            return response()->json([
-                'tags' => $tags,
-            ]);
+            return response()->json($metadata);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al generar etiquetas',
-                'message' => $e->getMessage()
+                'error'   => 'Error al generar metadatos con IA',
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Analizar imagen cruda en Base64 desde el frontend ANTES de subirla
+     * Analizar imagen en Base64 desde el frontend ANTES de subirla
      * POST /api/ai/media/analyze-base64
+     * Devuelve: { title, description }  — sin tags
      */
     public function analyzeBase64(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'image_base64' => 'required|string',
-            'mime_type' => 'required|string',
-            'title' => 'nullable|string|max:200',
-            'description' => 'nullable|string|max:1000',
-            'category' => 'nullable|string|max:100',
+            'mime_type'    => 'required|string',
+            'title'        => 'nullable|string|max:200',
+            'description'  => 'nullable|string|max:1000',
         ]);
 
         try {
-            // Guardar temporalmente la imagen base64 para pasarla al GeminiService
             $base64Data = preg_replace('#^data:image/\w+;base64,#i', '', $validated['image_base64']);
-            $tempImage = tempnam(sys_get_temp_dir(), 'gemini_img_');
+            $tempImage  = tempnam(sys_get_temp_dir(), 'gemini_img_');
             file_put_contents($tempImage, base64_decode($base64Data));
 
-            $tags = $this->gemini->generateTagsForMedia(
+            $metadata = $this->gemini->generateTitleAndDescription(
                 title: $validated['title'] ?? 'Sin título',
                 imagePath: $tempImage,
                 mimeType: $validated['mime_type'],
-                description: $validated['description'] ?? '',
-                category: $validated['category'] ?? '',
-                limit: 5
+                description: $validated['description'] ?? ''
             );
 
-            // Eliminar archivo temporal
             if (file_exists($tempImage)) {
                 unlink($tempImage);
             }
 
-            return response()->json([
-                'tags' => $tags,
-            ]);
+            return response()->json($metadata);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al analizar imagen con IA',
-                'message' => $e->getMessage()
+                'error'   => 'Error al analizar imagen con IA',
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

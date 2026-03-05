@@ -19,13 +19,13 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         
-        $query = MediaAsset::where('user_id', $userId);
+        $query = MediaAsset::query();
         
         if ($startDate) {
-            $query->whereDate('created_at', '>=', $startDate);
+            $query->whereDate('media_assets.created_at', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('created_at', '<=', $endDate);
+            $query->whereDate('media_assets.created_at', '<=', $endDate);
         }
 
         // Total Count (with filters)
@@ -40,19 +40,6 @@ class DashboardController extends Controller
             ->groupBy('type')
             ->pluck('count', 'type');
 
-        // Distribution by Category
-        $categoryData = (clone $query)
-            ->select('category', DB::raw('count(*) as count'))
-            ->whereNotNull('category')
-            ->groupBy('category')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'name' => ucfirst($item->category),
-                    'count' => $item->count
-                ];
-            });
-
         // Timeline Data (files per day)
         $timelineData = (clone $query)
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as count'))
@@ -63,22 +50,6 @@ class DashboardController extends Controller
                 return [
                     'date' => Carbon::parse($item->date)->format('d/m'),
                     'fullDate' => $item->date,
-                    'count' => $item->count
-                ];
-            });
-
-        // Author Data (files per author)
-        $authorData = (clone $query)
-            ->select('author', DB::raw('count(*) as count'))
-            ->whereNotNull('author')
-            ->where('author', '!=', '')
-            ->groupBy('author')
-            ->orderBy('count', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'name' => $item->author,
                     'count' => $item->count
                 ];
             });
@@ -97,8 +68,7 @@ class DashboardController extends Controller
             });
 
         // Recent Activity (last 5 files)
-        $recentActivity = MediaAsset::where('user_id', $userId)
-            ->orderBy('created_at', 'desc')
+        $recentActivity = MediaAsset::orderBy('created_at', 'desc')
             ->limit(5)
             ->get()
             ->map(function ($item) {
@@ -116,12 +86,32 @@ class DashboardController extends Controller
             });
 
         // Pending count
-        $pendingCount = MediaAsset::where('user_id', $userId)
-            ->where('status', 'pending')
-            ->count();
+        $pendingCount = MediaAsset::where('status', 'pending')->count();
+
+        // Author Distribution
+        $authorDistribution = (clone $query)
+            ->join('users', 'media_assets.user_id', '=', 'users.id')
+            ->select('users.first_name', 'users.last_name', DB::raw('count(*) as count'))
+            ->groupBy('users.id', 'users.first_name', 'users.last_name')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->toBase()
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => trim($item->first_name . ' ' . $item->last_name),
+                    'count' => $item->count
+                ];
+            });
 
         // --- PUBLICACIONES STATS ---
-        $pubQuery = Publication::query(); // Si se requiere filtrar por usuario: ->where('user_id', $userId)
+        $pubQuery = Publication::query()->where(function($q) use ($userId) {
+            $q->whereIn('status', ['published', 'archived'])
+              ->orWhere(function($subQ) use ($userId) {
+                  $subQ->where('status', 'draft')
+                       ->where('created_by', $userId);
+              });
+        });
 
         $totalPublications = (clone $pubQuery)->count();
         
@@ -151,12 +141,11 @@ class DashboardController extends Controller
             'total_size' => $totalSize,
             'total_size_formatted' => $this->formatBytes($totalSize),
             'type_counts' => $typeCounts,
-            'category_data' => $categoryData,
             'timeline_data' => $timelineData,
-            'author_data' => $authorData,
             'hourly_data' => $hourlyData,
             'recent_activity' => $recentActivity,
             'pending_count' => $pendingCount,
+            'author_distribution' => $authorDistribution,
             'publications' => [
                 'total' => $totalPublications,
                 'status_counts' => $pubStatusCounts,

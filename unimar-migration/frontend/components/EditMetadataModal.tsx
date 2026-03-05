@@ -12,24 +12,13 @@ interface EditMetadataModalProps {
   onClose: () => void;
 }
 
-const CATEGORIES = [
-  { value: 'evento', label: 'Evento' },
-  { value: 'clase', label: 'Clase' },
-  { value: 'entrevista', label: 'Entrevista' },
-  { value: 'promocional', label: 'Promocional' },
-  { value: 'documental', label: 'Documental' },
-  { value: 'otro', label: 'Otro' },
-];
-
 export default function EditMetadataModal({ file, onClose }: EditMetadataModalProps) {
   const { updateFileMetadata } = useIngestStore();
   
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
     tags: '',
-    author: '',
     date_taken: '',
     location: '',
   });
@@ -39,9 +28,7 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
       setFormData({
         title: file.title,
         description: file.description || '',
-        category: file.category || '',
         tags: file.tags.join(', '),
-        author: file.author || '',
         date_taken: file.date_taken || '',
         location: file.location || '',
       });
@@ -55,9 +42,7 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
     updateFileMetadata(file.id, {
       title: formData.title,
       description: formData.description,
-      category: formData.category,
       tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-      author: formData.author,
       date_taken: formData.date_taken,
       location: formData.location,
     });
@@ -126,20 +111,7 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white"
-              >
-                <option value="">Seleccionar...</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat.value} value={cat.value}>{cat.label}</option>
-                ))}
-              </select>
-            </div>
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Etiquetas</label>
               <input
@@ -152,17 +124,7 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Autor / Fotógrafo</label>
-              <input
-                type="text"
-                value={formData.author}
-                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                placeholder="Nombre del autor"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Captura</label>
               <input

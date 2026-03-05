@@ -15,10 +15,6 @@ class MediaController extends Controller
         $query = MediaAsset::with(['user', 'tags'])
             ->orderBy('created_at', 'desc');
 
-        if ($request->has('category') && $request->input('category')) {
-            $query->where('category', $request->input('category'));
-        }
-
         if ($request->has('start_date') && $request->start_date) {
             $query->whereDate('created_at', '>=', $request->start_date);
         }
@@ -36,24 +32,44 @@ class MediaController extends Controller
             });
         }
 
-        // Filter by author
-        if ($request->has('author') && $request->author) {
-            $query->where('author', 'like', '%' . $request->author . '%');
-        }
-
-        // Filter by location
-        if ($request->has('location') && $request->location) {
+        // Filter by location (supports multiple values via locations[])
+        if ($request->has('locations') && !empty($request->locations)) {
+            $locs = array_filter((array) $request->locations);
+            if (!empty($locs)) {
+                $query->where(function($q) use ($locs) {
+                    foreach ($locs as $loc) {
+                        $q->orWhere('location', 'like', '%' . $loc . '%');
+                    }
+                });
+            }
+        } elseif ($request->has('location') && $request->location) {
+            // backward compat single
             $query->where('location', 'like', '%' . $request->location . '%');
         }
 
-        // Filter by tags (JSON column search)
-        if ($request->has('tags') && $request->tags) {
-            $tagSearch = strtolower(trim($request->tags));
-            $query->where(function($q) use ($tagSearch) {
-                // Search in JSON array - works with MySQL JSON functions
-                $q->whereRaw("LOWER(tags) LIKE ?", ['%"' . $tagSearch . '"%'])
-                  ->orWhereRaw("LOWER(tags) LIKE ?", ['%' . $tagSearch . '%']);
-            });
+        // Filtrar por tags (soporta múltiples via tags[])
+        if ($request->has('tags') && !empty($request->tags)) {
+            $tagNames = array_filter((array) $request->tags);
+            if (!empty($tagNames)) {
+                $slugs = array_map(fn($n) => \Illuminate\Support\Str::slug($n), $tagNames);
+                $query->whereHas('tags', function ($q) use ($tagNames, $slugs) {
+                    $q->where(function($inner) use ($tagNames, $slugs) {
+                        $inner->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(name)'),
+                            array_map('strtolower', $tagNames))
+                              ->orWhereIn('slug', $slugs);
+                    });
+                });
+            }
+        }
+
+        // Filtrar por categorías (via tags con category_id)
+        if ($request->has('categories') && !empty($request->categories)) {
+            $categoryIds = array_filter(array_map('intval', (array) $request->categories));
+            if (!empty($categoryIds)) {
+                $query->whereHas('tags', function ($q) use ($categoryIds) {
+                    $q->whereIn('category_id', $categoryIds);
+                });
+            }
         }
 
         $media = $query->paginate(20);
@@ -78,8 +94,6 @@ class MediaController extends Controller
             $validated = $request->validate([
                 'title' => 'string|max:255',
                 'description' => 'nullable|string',
-                'category' => 'nullable|string|max:100',
-                'author' => 'nullable|string|max:100',
                 'location' => 'nullable|string|max:150',
                 'date_taken' => 'nullable|date',
                 'tags' => 'nullable|array',
@@ -90,14 +104,16 @@ class MediaController extends Controller
             $media->update($fillableData);
 
             if (isset($validated['tags'])) {
+                // Solo usar tags que ya existen en el catálogo (no crear on-the-fly)
                 $tagIds = [];
                 foreach ($validated['tags'] as $tagName) {
                     $slug = \Illuminate\Support\Str::slug($tagName);
-                    $tagModel = \App\Models\Tag::firstOrCreate(
-                        ['slug' => $slug],
-                        ['name' => ucfirst($tagName)]
-                    );
-                    $tagIds[] = $tagModel->id;
+                    $tagModel = \App\Models\Tag::where('slug', $slug)->first();
+                    if ($tagModel) {
+                        $tagIds[] = $tagModel->id;
+                    }
+                    // Si el tag no existe en el catálogo, se ignora silenciosamente
+                    // Los tags solo se crean desde la pantalla de Configuración > Catálogo
                 }
                 $media->tags()->sync($tagIds);
             }

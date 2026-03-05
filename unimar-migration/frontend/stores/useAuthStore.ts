@@ -13,7 +13,7 @@ export interface User {
   avatar?: string | null;
   profile_photo_path?: string | null;
   profile_photo_url?: string | null;
-  role?: 'admin' | 'editor' | 'user';
+  roles?: { id: number; name: string }[];
 }
 
 interface AuthState {
@@ -25,11 +25,13 @@ interface AuthState {
   setUser: (user: User) => void;
   logout: () => void;
   setHasHydrated: (state: boolean) => void;
+  isAdmin: () => boolean;
+  isEditor: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       token: null,
       user: null,
       isAuthenticated: false,
@@ -49,6 +51,22 @@ export const useAuthStore = create<AuthState>()(
       
       setHasHydrated: (state: boolean) => {
         set({ _hasHydrated: state });
+      },
+
+      isAdmin: () => {
+        const user = get().user;
+        if (user && user.roles) {
+          return user.roles.some((r) => r.name === 'admin');
+        }
+        return false;
+      },
+
+      isEditor: () => {
+        const user = get().user;
+        if (user && user.roles) {
+          return user.roles.some((r) => r.name === 'editor' || r.name === 'admin');
+        }
+        return false;
       }
     }),
     {

@@ -9,10 +9,8 @@ export interface IngestFile {
   preview: string | null;
   title: string;
   description: string;
-  category: string;
   tags: string[];
   date_taken?: string;
-  author?: string;
   location?: string;
   status: 'pending' | 'uploading' | 'uploaded' | 'error';
   progress: number;
@@ -33,8 +31,8 @@ interface IngestState {
   selectAll: () => void;
   deselectAll: () => void;
   
-  updateFileMetadata: (id: string, data: Partial<Pick<IngestFile, 'title' | 'description' | 'category' | 'tags' | 'date_taken' | 'author' | 'location'>>) => void;
-  updateSelectedMetadata: (data: Partial<Pick<IngestFile, 'title' | 'description' | 'category' | 'tags' | 'date_taken' | 'author' | 'location'>>) => void;
+  updateFileMetadata: (id: string, data: Partial<Pick<IngestFile, 'title' | 'description' | 'tags' | 'date_taken' | 'location'>>) => void;
+  updateSelectedMetadata: (data: Partial<Pick<IngestFile, 'title' | 'description' | 'tags' | 'date_taken' | 'location'>>) => void;
   
   setFileStatus: (id: string, status: IngestFile['status'], progress?: number) => void;
   setUploading: (value: boolean) => void;
@@ -83,7 +81,6 @@ const extractMetadata = async (file: File) => {
 
     const metadata: any = {};
     if (data.DateTimeOriginal) metadata.date_taken = data.DateTimeOriginal.toISOString();
-    if (data.Artist || data.XPAuthor) metadata.author = data.Artist || data.XPAuthor;
     if (data.Copyright) metadata.copyright = data.Copyright;
     if (data.latitude && data.longitude) {
       metadata.location = `${data.latitude}, ${data.longitude}`;
@@ -115,10 +112,8 @@ export const useIngestStore = create<IngestState>((set, get) => ({
         preview,
         title: file.name.replace(/\.[^/.]+$/, ''),
         description: '',
-        category: '',
         tags: [],
         date_taken: extracted.date_taken || '',
-        author: extracted.author || '',
         location: extracted.location || '',
         status: 'pending' as const,
         progress: 0,
