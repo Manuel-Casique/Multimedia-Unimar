@@ -22,6 +22,8 @@ class MediaAsset extends Model
         'thumbnail_path',
         'mime_type',
         'file_size',
+        'width',
+        'height',
         'status',
         'date_taken',
         'location',
@@ -120,59 +122,19 @@ class MediaAsset extends Model
     }
 
     /**
-     * Get image width (for images only).
+     * Get image width.
      */
-    public function getWidthAttribute(): ?int
+    public function getWidthAttribute($value): ?int
     {
-        if (!$this->file_path || !str_starts_with($this->mime_type ?? '', 'image/')) {
-            return null;
-        }
-        
-        try {
-            $path = storage_path('app/' . $this->file_path);
-            if (!file_exists($path)) {
-                $path = storage_path('app/public/' . str_replace('public/', '', $this->file_path));
-            }
-            
-            if (file_exists($path)) {
-                $size = @getimagesize($path);
-                if ($size) {
-                    return $size[0];
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently fail
-        }
-        
-        return null;
+        return $value;
     }
 
     /**
-     * Get image height (for images only).
+     * Get image height.
      */
-    public function getHeightAttribute(): ?int
+    public function getHeightAttribute($value): ?int
     {
-        if (!$this->file_path || !str_starts_with($this->mime_type ?? '', 'image/')) {
-            return null;
-        }
-        
-        try {
-            $path = storage_path('app/' . $this->file_path);
-            if (!file_exists($path)) {
-                $path = storage_path('app/public/' . str_replace('public/', '', $this->file_path));
-            }
-            
-            if (file_exists($path)) {
-                $size = @getimagesize($path);
-                if ($size) {
-                    return $size[1];
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently fail
-        }
-        
-        return null;
+        return $value;
     }
 
     /**
@@ -189,5 +151,13 @@ class MediaAsset extends Model
     public function publications()
     {
         return $this->belongsToMany(Publication::class, 'media_asset_publication');
+    }
+
+    /**
+     * Get the authors of the media asset.
+     */
+    public function authors()
+    {
+        return $this->belongsToMany(Author::class, 'author_media_asset');
     }
 }

@@ -12,7 +12,7 @@ class MediaController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MediaAsset::with(['user', 'tags'])
+        $query = MediaAsset::with(['user', 'tags', 'authors'])
             ->orderBy('created_at', 'desc');
 
         if ($request->has('start_date') && $request->start_date) {
@@ -30,6 +30,28 @@ class MediaController extends Controller
                 $q->where('title', 'like', '%' . $searchTerm . '%')
                   ->orWhere('description', 'like', '%' . $searchTerm . '%');
             });
+        }
+
+        // Filter by media type (image, video, etc)
+        if ($request->has('type') && current((array)$request->type) && current((array)$request->type) !== 'all') {
+            $type = current((array)$request->type);
+            $query->where('mime_type', 'like', $type . '/%');
+        }
+
+        // Filter by orientation
+        if ($request->has('orientation') && !empty($request->orientation) && current((array)$request->orientation) !== 'all') {
+            $orientation = current((array)$request->orientation);
+            
+            // Only apply if width and height are available
+            $query->whereNotNull('width')->whereNotNull('height');
+            
+            if ($orientation === 'horizontal') {
+                $query->whereRaw('width > height');
+            } elseif ($orientation === 'vertical') {
+                $query->whereRaw('width < height');
+            } elseif ($orientation === 'square') {
+                $query->whereRaw('width = height');
+            }
         }
 
         // Filter by location (supports multiple values via locations[])
@@ -97,10 +119,12 @@ class MediaController extends Controller
                 'location' => 'nullable|string|max:150',
                 'date_taken' => 'nullable|date',
                 'tags' => 'nullable|array',
+                'authors' => 'nullable|array',
+                'authors.*' => 'integer|exists:authors,id',
             ]);
 
-            // Filtrar del array validado lo que sea tags porque se manejan diferente
-            $fillableData = \Illuminate\Support\Arr::except($validated, ['tags']);
+            // Filtrar del array validado lo que sea tags y authors porque se manejan diferente
+            $fillableData = \Illuminate\Support\Arr::except($validated, ['tags', 'authors']);
             $media->update($fillableData);
 
             if (isset($validated['tags'])) {
@@ -118,8 +142,12 @@ class MediaController extends Controller
                 $media->tags()->sync($tagIds);
             }
 
+            if (isset($validated['authors'])) {
+                $media->authors()->sync($validated['authors']);
+            }
+
             // Recargar con relaciones para la respuesta
-            $media->load('tags');
+            $media->load(['tags', 'authors']);
 
             return response()->json([
                 'message' => 'Archivo actualizado con éxito.',

@@ -44,8 +44,8 @@ export default function Sidebar() {
     { label: 'Galería', icon: faImages, href: '/gallery' },
     ...(isAdmin() || isEditor() ? [{ label: 'Publicaciones', icon: faNewspaper, href: '/publications' }] : []),
     { label: 'Estadísticas', icon: faChartPie, href: '/stats' },
-    ...(isAdmin() ? [{ label: 'Usuarios', icon: faUsers, href: '/settings/users' }] : []),
     ...(isAdmin() ? [{ label: 'Taxonomía', icon: faTag, href: '/settings/catalog' }] : []),
+    ...(isAdmin() ? [{ label: 'Usuarios', icon: faUsers, href: '/settings/users' }] : []),
     { label: 'Configuración', icon: faCog, href: '/settings' },
   ];
 

@@ -5,23 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import api from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
-
-const MySwal = withReactContent(Swal);
-
-// Toast de éxito (esquina superior derecha)
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2500,
-  timerProgressBar: true,
-  didOpen: (toast) => {
-    toast.addEventListener('mouseenter', Swal.stopTimer);
-    toast.addEventListener('mouseleave', Swal.resumeTimer);
-  },
-});
+import toast, { Swal } from '@/lib/toast';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Category {
@@ -46,6 +30,11 @@ interface Location {
   detail?: string;
 }
 
+interface Author {
+  id: number;
+  name: string;
+}
+
 // ─── Slug preview helper ──────────────────────────────────────────────────────
 function toSlug(str: string) {
   return str
@@ -57,7 +46,7 @@ function toSlug(str: string) {
 
 // ─── Reusable modal wrapper ───────────────────────────────────────────────────
 function confirmDelete(name: string, extra?: string) {
-  return MySwal.fire({
+  return Swal.fire({
     title: `¿Eliminar "${name}"?`,
     html: extra ?? 'Esta acción no se puede deshacer.',
     icon: 'warning',
@@ -90,7 +79,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 export default function CatalogPage() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated, isAdmin } = useAuthStore();
-  const [tab, setTab] = useState<'categories' | 'tags' | 'locations'>('categories');
+  const [tab, setTab] = useState<'categories' | 'tags' | 'authors' | 'locations'>('categories');
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) router.push('/login');
@@ -117,6 +106,13 @@ export default function CatalogPage() {
             Etiquetas
           </span>
         </TabBtn>
+        <TabBtn active={tab === 'authors'} onClick={() => setTab('authors')}>
+          <span className="inline-flex items-center gap-2">
+            {/* fa-users */}
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 640 512"><path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM609.3 512H471.4c5.4-9.4 8.6-20.3 8.6-32v-8c0-60.7-27.1-115.2-69.8-151.8c2.4-.1 4.7-.2 7.1-.2h61.4C567.8 320 640 392.2 640 481.3c0 17-13.8 30.7-30.7 30.7zM432 256c-31 0-59-12.6-79.3-32.9C372.4 196.5 384 163.6 384 128c0-26.8-6.6-52.1-18.3-74.3C384.3 40.1 407.2 32 432 32c61.9 0 112 50.1 112 112s-50.1 112-112 112z"/></svg>
+            Autores
+          </span>
+        </TabBtn>
         <TabBtn active={tab === 'locations'} onClick={() => setTab('locations')}>
           <span className="inline-flex items-center gap-2">
             {/* fa-location-dot */}
@@ -128,6 +124,7 @@ export default function CatalogPage() {
 
       {tab === 'categories' && <CategoriesTab />}
       {tab === 'tags' && <TagsTab />}
+      {tab === 'authors' && <AuthorsTab />}
       {tab === 'locations' && <LocationsTab />}
     </AdminLayout>
   );
@@ -183,7 +180,7 @@ function CategoriesTab() {
       }
       setShowForm(false);
       load();
-      Toast.fire({ icon: 'success', title: editing ? 'Categoría actualizada' : 'Categoría creada' });
+      toast.success(editing ? 'Categoría actualizada' : 'Categoría creada');
     } catch (e: any) {
       setError(e.response?.data?.message || 'Error al guardar.');
     } finally {
@@ -202,7 +199,7 @@ function CategoriesTab() {
       await api.delete(`/categories/${cat.id}`);
       load();
     } catch (e: any) {
-      MySwal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.message || 'No se pudo eliminar.' });
+      toast.error('Error', e.response?.data?.message || 'No se pudo eliminar.');
     }
   };
 
@@ -378,7 +375,7 @@ function TagsTab() {
       }
       setShowForm(false);
       load();
-      Toast.fire({ icon: 'success', title: editing ? 'Etiqueta actualizada' : 'Etiqueta creada' });
+      toast.success(editing ? 'Etiqueta actualizada' : 'Etiqueta creada');
     } catch (e: any) {
       setError(e.response?.data?.message || 'Error al guardar.');
     } finally {
@@ -393,7 +390,7 @@ function TagsTab() {
       await api.delete(`/tags/${tag.id}`);
       load();
     } catch (e: any) {
-      MySwal.fire({ icon: 'error', title: 'Etiqueta en uso', text: e.response?.data?.message || 'No se pudo eliminar.' });
+      toast.error('Etiqueta en uso', e.response?.data?.message || 'No se pudo eliminar.');
     }
   };
 
@@ -571,7 +568,7 @@ function LocationsTab() {
       }
       setShowForm(false);
       load();
-      Toast.fire({ icon: 'success', title: editing ? 'Ubicación actualizada' : 'Ubicación creada' });
+      toast.success(editing ? 'Ubicación actualizada' : 'Ubicación creada');
     } catch (e: any) {
       setError(e.response?.data?.message || 'Error al guardar.');
     } finally {
@@ -586,7 +583,7 @@ function LocationsTab() {
       await api.delete(`/locations/${loc.id}`);
       load();
     } catch (e: any) {
-      MySwal.fire({ icon: 'error', title: 'Error', text: e.response?.data?.message || 'No se pudo eliminar.' });
+      toast.error('Error', e.response?.data?.message || 'No se pudo eliminar.');
     }
   };
 
@@ -674,6 +671,159 @@ function LocationsTab() {
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                       </button>
                       <button onClick={() => handleDelete(loc)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TAB 4 — AUTORES
+// ═════════════════════════════════════════════════════════════════════════════
+function AuthorsTab() {
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Author | null>(null);
+  const [form, setForm] = useState({ name: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/authors');
+      setAuthors(res.data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openNew = () => {
+    setEditing(null);
+    setForm({ name: '' });
+    setError('');
+    setShowForm(true);
+  };
+
+  const openEdit = (author: Author) => {
+    setEditing(author);
+    setForm({ name: author.name });
+    setError('');
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { setError('El nombre es obligatorio.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      if (editing) {
+        await api.put(`/authors/${editing.id}`, form);
+      } else {
+        await api.post('/authors', form);
+      }
+      setShowForm(false);
+      load();
+      toast.success(editing ? 'Autor actualizado' : 'Autor creado');
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Error al guardar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (author: Author) => {
+    const res = await confirmDelete(author.name, 'Esta acción no se puede deshacer.');
+    if (!res.isConfirmed) return;
+    try {
+      await api.delete(`/authors/${author.id}`);
+      load();
+    } catch (e: any) {
+      toast.error('Error', e.response?.data?.message || 'No se pudo eliminar.');
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-slate-500">{authors.length} autor(es)</p>
+        <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 bg-[#30669a] hover:bg-[#255080] text-white text-sm font-medium rounded-lg transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          Nuevo Autor
+        </button>
+      </div>
+
+      {/* Inline form */}
+      {showForm && (
+        <div className="mb-4 p-4 border border-[#30669a]/30 rounded-xl bg-blue-50/50">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">{editing ? 'Editar autor' : 'Nuevo autor'}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Nombre completo *</label>
+              <input
+                type="text" autoFocus
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#30669a]/30 focus:border-[#30669a]"
+                placeholder="ej: Juan Pérez"
+              />
+            </div>
+          </div>
+          {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+          <div className="flex gap-2 mt-3">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-[#30669a] text-white text-sm rounded-lg hover:bg-[#255080] disabled:opacity-50 transition-colors">
+              {saving ? 'Guardando...' : editing ? 'Actualizar' : 'Crear'}
+            </button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 text-slate-600 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-[#30669a] border-t-transparent rounded-full animate-spin"/></div>
+      ) : authors.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">
+          <svg className="w-12 h-12 mx-auto mb-3 opacity-40" fill="currentColor" viewBox="0 0 640 512"><path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM609.3 512H471.4c5.4-9.4 8.6-20.3 8.6-32v-8c0-60.7-27.1-115.2-69.8-151.8c2.4-.1 4.7-.2 7.1-.2h61.4C567.8 320 640 392.2 640 481.3c0 17-13.8 30.7-30.7 30.7zM432 256c-31 0-59-12.6-79.3-32.9C372.4 196.5 384 163.6 384 128c0-26.8-6.6-52.1-18.3-74.3C384.3 40.1 407.2 32 432 32c61.9 0 112 50.1 112 112s-50.1 112-112 112z"/></svg>
+          <p className="text-sm">No hay autores. Crea el primero.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Nombre</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {authors.map(author => (
+                <tr key={author.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3.5 h-3.5 text-[#30669a] flex-shrink-0" fill="currentColor" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
+                      <p className="text-sm font-medium text-slate-800">{author.name}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEdit(author)} className="p-1.5 text-slate-400 hover:text-[#30669a] hover:bg-slate-100 rounded-lg transition-colors">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                      </button>
+                      <button onClick={() => handleDelete(author)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                       </button>
                     </div>

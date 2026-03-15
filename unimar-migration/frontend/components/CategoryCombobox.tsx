@@ -38,6 +38,7 @@ export default function CategoryCombobox({
   useEffect(() => { setMounted(true); }, []);
 
   const fetchCategories = useCallback(async () => {
+    if (allCategories.length > 0) return;
     setLoading(true);
     try {
       const res = await api.get("/categories");
@@ -49,7 +50,8 @@ export default function CategoryCombobox({
     }
   }, []);
 
-  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+  // Lazy load instead of on mount
+  // useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
   const updateDropdownPosition = useCallback(() => {
     if (!containerRef.current) return;
@@ -62,7 +64,11 @@ export default function CategoryCombobox({
     }
   }, []);
 
-  const openDropdown = () => { updateDropdownPosition(); setIsOpen(true); };
+  const openDropdown = () => { 
+    updateDropdownPosition(); 
+    setIsOpen(true); 
+    fetchCategories();
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

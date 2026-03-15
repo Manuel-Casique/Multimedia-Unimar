@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import api from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
-
-const MySwal = withReactContent(Swal);
+import toast from '@/lib/toast';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -64,20 +61,10 @@ export default function SettingsPage() {
         setUser(response.data.user);
       }
       
-      MySwal.fire({
-        icon: 'success',
-        title: '¡Perfil actualizado!',
-        text: 'Tus datos han sido guardados correctamente.',
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      toast.success('¡Perfil actualizado!', 'Tus datos han sido guardados correctamente.');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      MySwal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.response?.data?.message || 'No se pudo actualizar el perfil.',
-      });
+      toast.error('Error', error.response?.data?.message || 'No se pudo actualizar el perfil.');
     } finally {
       setLoading(false);
     }
@@ -87,7 +74,7 @@ export default function SettingsPage() {
     e.preventDefault();
     
     if (formData.new_password !== formData.new_password_confirmation) {
-      MySwal.fire({ icon: 'error', title: 'Error', text: 'Las contraseñas no coinciden.' });
+      toast.error('Error', 'Las contraseñas no coinciden.');
       return;
     }
     
@@ -107,19 +94,10 @@ export default function SettingsPage() {
         new_password_confirmation: '',
       }));
       
-      MySwal.fire({
-        icon: 'success',
-        title: '¡Contraseña actualizada!',
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      toast.success('¡Contraseña actualizada!');
     } catch (error: any) {
       console.error('Error updating password:', error);
-      MySwal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.response?.data?.message || 'No se pudo actualizar la contraseña.',
-      });
+      toast.error('Error', error.response?.data?.message || 'No se pudo actualizar la contraseña.');
     } finally {
       setLoading(false);
     }

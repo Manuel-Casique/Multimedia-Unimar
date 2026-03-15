@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use FFMpeg\FFMpeg;
+use FFMpeg\Coordinate\TimeCode;
 
 class IngestController extends Controller
 {
@@ -132,6 +136,12 @@ class IngestController extends Controller
                 $asset->tags()->sync($tagIds);
             }
 
+            // Sync authors
+            $authorsToSync = $currentMetadata['authors'] ?? [];
+            if (!empty($authorsToSync)) {
+                $asset->authors()->sync($authorsToSync);
+            }
+
                 $savedAssets[] = $asset;
                 $batch->increment('processed_files');
             }
@@ -214,14 +224,25 @@ class IngestController extends Controller
             else if (str_starts_with($mimeType, 'video/')) $type = 'video';
             else if (str_starts_with($mimeType, 'audio/')) $type = 'audio';
 
-            // Extraer EXIF (solo imágenes)
+            // Extraer EXIF (solo imágenes) y dimensiones
             $exifData = null;
             $extractedDateTaken = null;
             $extractedLocation = null;
             $extractedAuthor = null;
+            $width = null;
+            $height = null;
+            $thumbnailPath = null;
 
             if ($type === 'image') {
                 $exifData = $this->extractExifData($finalPath);
+                
+                // Get dims
+                $size = @getimagesize($finalPath);
+                if ($size) {
+                    $width = $size[0];
+                    $height = $size[1];
+                }
+
                 if ($exifData) {
                     if (isset($exifData['DateTimeOriginal'])) {
                         try {
@@ -234,10 +255,61 @@ class IngestController extends Controller
                         $extractedLocation = "{$lat}, {$lng}";
                     }
                 }
+                // Generate Thumbnail using Intervention Image v3
+                try {
+                    $manager = new ImageManager(new Driver());
+                    $image = $manager->read($finalPath);
+                    $image->scaleDown(width: 400); // Scale proportionally securely down to 400px width
+                    
+                    $thumbnailFilename = "{$uuid}.jpg"; // Always save thumbnails as jpg
+                    $thumbnailRelativePath = "media/thumbnails/{$thumbnailFilename}";
+                    $thumbnailAbsolutePath = storage_path("app/public/{$thumbnailRelativePath}");
+                    
+                    if (!file_exists(dirname($thumbnailAbsolutePath))) {
+                        mkdir(dirname($thumbnailAbsolutePath), 0755, true);
+                    }
+                    
+                    $image->save($thumbnailAbsolutePath, quality: 60);
+                    $thumbnailPath = $thumbnailRelativePath;
+                } catch (\Exception $e) {
+                    \Log::error("Error generating image thumbnail: " . $e->getMessage());
+                }
+            } elseif ($type === 'video') {
+                try {
+                    $ffmpeg = FFMpeg::create([
+                        'ffmpeg.binaries'  => 'C:/ffmpeg/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe',
+                        'ffprobe.binaries' => 'C:/ffmpeg/ffmpeg-master-latest-win64-gpl/bin/ffprobe.exe',
+                        'timeout'          => 3600,
+                        'ffmpeg.threads'   => 12,
+                    ]);
+
+                    $video = $ffmpeg->open($finalPath);
+
+                    // Extract Dimensions
+                    $dimension = $video->getStreams()->videos()->first()->getDimensions();
+                    if ($dimension) {
+                        $width = $dimension->getWidth();
+                        $height = $dimension->getHeight();
+                    }
+
+                    // Extract Thumbnail
+                    $thumbnailRelativePath = "media/thumbnails/{$uuid}.jpg";
+                    $thumbnailAbsolutePath = storage_path("app/public/{$thumbnailRelativePath}");
+                    
+                    if (!file_exists(dirname($thumbnailAbsolutePath))) {
+                        mkdir(dirname($thumbnailAbsolutePath), 0755, true);
+                    }
+
+                    $video->frame(TimeCode::fromSeconds(1))->save($thumbnailAbsolutePath);
+                    $thumbnailPath = $thumbnailRelativePath;
+
+                } catch (\Exception $e) {
+                    \Log::error("FFMpeg Error processing video: " . $e->getMessage());
+                }
             }
 
             // Transacción DB
-            return DB::transaction(function () use ($user, $originalName, $metadata, $mimeType, $finalRelativePath, $finalPath, $extractedDateTaken, $extractedLocation, $exifData) {
+            return DB::transaction(function () use ($user, $originalName, $metadata, $mimeType, $finalRelativePath, $finalPath, $extractedDateTaken, $extractedLocation, $exifData, $width, $height, $thumbnailPath) {
                 // Creamos un lote (batch) por archivo
                 $batch = UploadBatch::create([
                     'user_id' => $user->id,
@@ -253,9 +325,12 @@ class IngestController extends Controller
                     'title' => !empty($metadata['title']) ? $metadata['title'] : $originalName,
                     'description' => !empty($metadata['description']) ? $metadata['description'] : null,
                     'file_path' => $finalRelativePath,
+                    'thumbnail_path' => $thumbnailPath,
                     'original_name' => $originalName,
                     'mime_type' => $mimeType,
                     'file_size' => filesize($finalPath),
+                    'width' => $width,
+                    'height' => $height,
                     'status' => 'uploaded',
                     'date_taken' => !empty($metadata['date_taken']) ? $metadata['date_taken'] : $extractedDateTaken,
                     'location' => !empty($metadata['location']) ? $metadata['location'] : $extractedLocation,
@@ -275,6 +350,12 @@ class IngestController extends Controller
                         $tagIds[] = $tagModel->id;
                     }
                     $asset->tags()->sync($tagIds);
+                }
+
+                // Sync authors
+                $authorsToSync = $metadata['authors'] ?? [];
+                if (!empty($authorsToSync)) {
+                    $asset->authors()->sync($authorsToSync);
                 }
 
                 return response()->json([

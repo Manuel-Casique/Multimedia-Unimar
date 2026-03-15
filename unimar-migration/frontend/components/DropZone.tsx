@@ -127,7 +127,7 @@ export default function DropZone({ className = '' }: DropZoneProps) {
             <strong>Formatos:</strong> JPG, PNG, GIF, WEBP, MP4, MOV, AVI, MP3, WAV, OGG
           </p>
           <p>
-            <strong>Tamaño máximo:</strong> 100MB por archivo
+            <strong>Tamaño máximo:</strong> 500MB por archivo
           </p>
         </div>
       </div>

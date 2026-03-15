@@ -12,6 +12,7 @@
         "laravel/sanctum": "^4.2",
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.9",
+        "pbmedia/laravel-ffmpeg": "^8.9",
         "spatie/laravel-permission": "^6.24"
     },
     "require-dev": {

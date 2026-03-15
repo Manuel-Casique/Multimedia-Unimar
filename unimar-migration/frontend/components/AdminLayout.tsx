@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import Sidebar from './Sidebar';
+import FloatingUploadWidget from './FloatingUploadWidget';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faUser } from '@fortawesome/free-solid-svg-icons';
 
@@ -48,6 +49,9 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         
+        {/* Floating Upload Widget — persists across all pages */}
+        <FloatingUploadWidget />
+
         {/* Top Navbar - Blue with user info */}
         <nav 
           className="w-full shadow-md flex items-center justify-between px-4"

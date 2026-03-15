@@ -4,33 +4,28 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import api from "@/lib/api";
 
-export interface Tag {
+export interface Author {
   id: number;
   name: string;
-  slug: string;
-  category_id: number | null;
-  category_name?: string;
 }
 
-interface TagComboboxProps {
-  value: Tag[];
-  onChange: (tags: Tag[]) => void;
+interface AuthorComboboxProps {
+  value: Author[];
+  onChange: (authors: Author[]) => void;
   placeholder?: string;
-  categoryId?: number | null;
   className?: string;
   darkMode?: boolean;
 }
 
-export default function TagCombobox({
+export default function AuthorCombobox({
   value = [],
   onChange,
-  placeholder = "Buscar etiqueta...",
-  categoryId,
+  placeholder = "Buscar autor...",
   className = "",
   darkMode = false,
-}: TagComboboxProps) {
+}: AuthorComboboxProps) {
   const [inputValue, setInputValue] = useState("");
-  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [allAuthors, setAllAuthors] = useState<Author[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -43,35 +38,30 @@ export default function TagCombobox({
     setMounted(true);
   }, []);
 
-  // Carga tags del catálogo
-  const fetchTags = useCallback(async () => {
-    if (allTags.length > 0) return;
+  const fetchAuthors = useCallback(async () => {
+    if (allAuthors.length > 0) return;
     setLoading(true);
     try {
-      const params: Record<string, any> = {};
-      if (categoryId) params.category_id = categoryId;
-      const res = await api.get("/tags", { params });
-      setAllTags(res.data);
+      const res = await api.get("/authors");
+      setAllAuthors(res.data);
     } catch (err) {
-      console.error("Error loading tags:", err);
+      console.error("Error loading authors:", err);
     } finally {
       setLoading(false);
     }
-  }, [categoryId]);
+  }, []);
 
   // Lazy load instead of fetching on mount
   // useEffect(() => {
-  //   fetchTags();
-  // }, [fetchTags]);
+  //   fetchAuthors();
+  // }, [fetchAuthors]);
 
-  // Recalcular posición del dropdown usando position:fixed para evitar clipping
   const updateDropdownPosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    const dropdownHeight = Math.min(208, 52 * 4); // max ~4 items visible
+    const dropdownHeight = Math.min(208, 52 * 4); 
 
-    // Si hay espacio abajo, abrir hacia abajo; si no, hacia arriba
     if (spaceBelow >= dropdownHeight || spaceBelow > rect.top) {
       setDropdownStyle({
         position: "fixed",
@@ -91,23 +81,20 @@ export default function TagCombobox({
     }
   }, []);
 
-  // Abrir dropdown y calcular posición
   const openDropdown = () => {
     updateDropdownPosition();
     setIsOpen(true);
-    fetchTags();
+    fetchAuthors();
   };
 
-  // Cerrar al hacer click fuera
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
-        // También comprobar si el click fue en el portal del dropdown
         const target = e.target as Element;
-        if (!target.closest("[data-tag-dropdown]")) {
+        if (!target.closest("[data-author-dropdown]")) {
           setIsOpen(false);
           setInputValue("");
         }
@@ -117,7 +104,6 @@ export default function TagCombobox({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Recalcular posición al hacer scroll o resize
   useEffect(() => {
     if (!isOpen) return;
     const update = () => updateDropdownPosition();
@@ -129,23 +115,21 @@ export default function TagCombobox({
     };
   }, [isOpen, updateDropdownPosition]);
 
-  // Tags filtrados
-  const filteredTags = allTags.filter(
-    (tag) =>
-      tag.name.toLowerCase().includes(inputValue.toLowerCase()) &&
-      !value.some((v) => v.id === tag.id),
+  const filteredAuthors = allAuthors.filter(
+    (author) =>
+      author.name.toLowerCase().includes(inputValue.toLowerCase()) &&
+      !value.some((v) => v.id === author.id),
   );
 
-  const handleSelect = (tag: Tag) => {
-    onChange([...value, tag]);
+  const handleSelect = (author: Author) => {
+    onChange([...value, author]);
     setInputValue("");
     inputRef.current?.focus();
-    // Mantener abierto para selección múltiple
     updateDropdownPosition();
   };
 
-  const handleRemove = (tagId: number) => {
-    onChange(value.filter((t) => t.id !== tagId));
+  const handleRemove = (authorId: number) => {
+    onChange(value.filter((t) => t.id !== authorId));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -161,7 +145,6 @@ export default function TagCombobox({
     }
   };
 
-  // Estilos
   const baseContainer = darkMode
     ? "bg-slate-800 border-slate-700 text-white"
     : "bg-white border-slate-300 text-slate-800";
@@ -179,7 +162,7 @@ export default function TagCombobox({
   const dropdown = isOpen && mounted ? (
     createPortal(
       <div
-        data-tag-dropdown
+        data-author-dropdown
         style={dropdownStyle}
         className={`border rounded-lg shadow-xl max-h-52 overflow-y-auto ${dropdownBg}`}
       >
@@ -189,30 +172,27 @@ export default function TagCombobox({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <span className="text-xs">Cargando etiquetas...</span>
+            <span className="text-xs">Cargando autores...</span>
           </div>
-        ) : filteredTags.length === 0 ? (
+        ) : filteredAuthors.length === 0 ? (
           <div className="py-3 px-3 text-xs text-slate-400 italic">
             {inputValue
               ? `Sin resultados para "${inputValue}"`
-              : "No hay etiquetas disponibles en el catálogo"}
+              : "No hay autores disponibles en el catálogo"}
           </div>
         ) : (
-          filteredTags.map((tag) => (
+          filteredAuthors.map((author) => (
             <button
-              key={tag.id}
+              key={author.id}
               type="button"
-              data-tag-dropdown
+              data-author-dropdown
               className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${itemHover} ${darkMode ? "text-white" : "text-slate-700"}`}
               onMouseDown={(e) => {
                 e.preventDefault();
-                handleSelect(tag);
+                handleSelect(author);
               }}
             >
-              <span>{tag.name}</span>
-              {tag.category_name && (
-                <span className="text-xs text-slate-400 ml-2">{tag.category_name}</span>
-              )}
+              <span>{author.name}</span>
             </button>
           ))
         )}
@@ -223,7 +203,6 @@ export default function TagCombobox({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      {/* Input container con chips */}
       <div
         className={`flex flex-wrap gap-1.5 items-center min-h-[38px] px-2 py-1.5 border rounded-lg cursor-text transition-all focus-within:ring-2 focus-within:ring-[#30669a]/30 focus-within:border-[#30669a] ${baseContainer}`}
         onClick={() => {
@@ -231,28 +210,26 @@ export default function TagCombobox({
           openDropdown();
         }}
       >
-        {/* Chips seleccionados */}
-        {value.map((tag) => (
+        {value.map((author) => (
           <span
-            key={tag.id}
+            key={author.id}
             className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${chipBg}`}
           >
-            {tag.name}
+            {author.name}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleRemove(tag.id);
+                handleRemove(author.id);
               }}
               className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity leading-none"
-              aria-label={`Quitar ${tag.name}`}
+              aria-label={`Quitar ${author.name}`}
             >
               ×
             </button>
           </span>
         ))}
 
-        {/* Input búsqueda */}
         <input
           ref={inputRef}
           type="text"
@@ -268,7 +245,6 @@ export default function TagCombobox({
         />
       </div>
 
-      {/* Dropdown via portal (evita clipping por overflow del contenedor padre) */}
       {dropdown}
     </div>
   );

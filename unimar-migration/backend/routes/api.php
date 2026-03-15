@@ -11,6 +11,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\AuthorController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -53,9 +54,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/profile', [SettingsController::class, 'updateProfile']);
     Route::post('/user/photo', [ProfileController::class, 'updatePhoto']);
 
-    // Tags & Locations — lectura para todos los autenticados
+    // Tags, Locations & Authors — lectura para todos los autenticados
     Route::get('/tags', [TagController::class, 'index']);
     Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/authors', [AuthorController::class, 'index']);
 
     // Publications (protegidas)
     Route::get('/publications/my', [PublicationController::class, 'myPublications']);
@@ -89,5 +91,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/locations', [LocationController::class, 'store']);
         Route::put('/locations/{id}', [LocationController::class, 'update']);
         Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
+
+        // Authors CRUD (admin)
+        Route::post('/authors', [AuthorController::class, 'store']);
+        Route::put('/authors/{id}', [AuthorController::class, 'update']);
+        Route::delete('/authors/{id}', [AuthorController::class, 'destroy']);
     });
 });

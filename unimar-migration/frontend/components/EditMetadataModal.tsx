@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
+import toast from '@/lib/toast';
 import { IngestFile, useIngestStore } from '@/stores/useIngestStore';
-
-const MySwal = withReactContent(Swal);
+import AuthorCombobox, { Author } from '@/components/AuthorCombobox';
 
 interface EditMetadataModalProps {
   file: IngestFile | null;
@@ -19,6 +17,7 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
     title: '',
     description: '',
     tags: '',
+    authors: [] as Author[],
     date_taken: '',
     location: '',
   });
@@ -29,6 +28,7 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
         title: file.title,
         description: file.description || '',
         tags: file.tags.join(', '),
+        authors: file.authors || [],
         date_taken: file.date_taken || '',
         location: file.location || '',
       });
@@ -43,20 +43,12 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
       title: formData.title,
       description: formData.description,
       tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+      authors: formData.authors,
       date_taken: formData.date_taken,
       location: formData.location,
     });
 
-    MySwal.fire({
-      icon: 'success',
-      title: 'Guardado',
-      text: 'Información actualizada correctamente',
-      timer: 1000,
-      showConfirmButton: false,
-      customClass: {
-        popup: 'rounded-2xl border border-white/60 backdrop-blur-xl bg-white/90 shadow-xl',
-      }
-    });
+    toast.success('Guardado', 'Información actualizada correctamente');
 
     onClose();
   };
@@ -120,6 +112,17 @@ export default function EditMetadataModal({ file, onClose }: EditMetadataModalPr
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
                 placeholder="Separa con comas..."
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Autores</label>
+              <AuthorCombobox
+                value={formData.authors as Author[]}
+                onChange={(authors) => setFormData({ ...formData, authors })}
+                placeholder="Buscar autor..."
               />
             </div>
           </div>

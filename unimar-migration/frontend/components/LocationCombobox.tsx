@@ -68,6 +68,7 @@ export default function LocationCombobox(props: LocationComboboxProps) {
 
   // Load location catalog
   const fetchLocations = useCallback(async () => {
+    if (locations.length > 0) return;
     setLoading(true);
     try {
       const res = await api.get("/locations");
@@ -79,7 +80,8 @@ export default function LocationCombobox(props: LocationComboboxProps) {
     }
   }, []);
 
-  useEffect(() => { fetchLocations(); }, [fetchLocations]);
+  // Lazy load instead of on mount
+  // useEffect(() => { fetchLocations(); }, [fetchLocations]);
 
   // Calculate dropdown position (position:fixed)
   const updateDropdownPosition = useCallback(() => {
@@ -93,7 +95,11 @@ export default function LocationCombobox(props: LocationComboboxProps) {
     }
   }, []);
 
-  const openDropdown = () => { updateDropdownPosition(); setIsOpen(true); };
+  const openDropdown = () => { 
+    updateDropdownPosition(); 
+    setIsOpen(true); 
+    fetchLocations();
+  };
 
   // Close on outside click
   useEffect(() => {

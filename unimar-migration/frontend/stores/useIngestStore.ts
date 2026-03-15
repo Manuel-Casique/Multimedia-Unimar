@@ -10,6 +10,7 @@ export interface IngestFile {
   title: string;
   description: string;
   tags: string[];
+  authors?: any[];
   date_taken?: string;
   location?: string;
   status: 'pending' | 'uploading' | 'uploaded' | 'error';
@@ -31,8 +32,8 @@ interface IngestState {
   selectAll: () => void;
   deselectAll: () => void;
   
-  updateFileMetadata: (id: string, data: Partial<Pick<IngestFile, 'title' | 'description' | 'tags' | 'date_taken' | 'location'>>) => void;
-  updateSelectedMetadata: (data: Partial<Pick<IngestFile, 'title' | 'description' | 'tags' | 'date_taken' | 'location'>>) => void;
+  updateFileMetadata: (id: string, data: Partial<Pick<IngestFile, 'title' | 'description' | 'tags' | 'authors' | 'date_taken' | 'location'>>) => void;
+  updateSelectedMetadata: (data: Partial<Pick<IngestFile, 'title' | 'description' | 'tags' | 'authors' | 'date_taken' | 'location'>>) => void;
   
   setFileStatus: (id: string, status: IngestFile['status'], progress?: number) => void;
   setUploading: (value: boolean) => void;
@@ -113,6 +114,7 @@ export const useIngestStore = create<IngestState>((set, get) => ({
         title: file.name.replace(/\.[^/.]+$/, ''),
         description: '',
         tags: [],
+        authors: [],
         date_taken: extracted.date_taken || '',
         location: extracted.location || '',
         status: 'pending' as const,
