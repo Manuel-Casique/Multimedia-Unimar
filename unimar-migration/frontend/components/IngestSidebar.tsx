@@ -88,11 +88,13 @@ export default function IngestSidebar() {
       const response = await api.post('/ai/media/analyze-base64', {
         image_base64: base64Data,
         mime_type: fileContext.file.type || 'image/jpeg',
-        title: fileContext.title || '',
-        description: bulkData.description || '',
+        // Pass empty strings so the AI isn't influenced by old/wrong existing data.
+        title: '',
+        description: '',
       });
 
       if (response.data) {
+        // Force the new AI output regardless of what was there before
         const aiTitle = response.data.title || fileContext.title;
         const aiDescription = response.data.description || bulkData.description;
 

@@ -70,6 +70,11 @@ export default function GalleryPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [orientationFilter, setOrientationFilter] = useState<string>('all');
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  
   // Modal state
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
@@ -101,10 +106,10 @@ export default function GalleryPage() {
     }
   }, [isAuthenticated, _hasHydrated, router]); 
 
-  const fetchMedia = async () => {
+  const fetchMedia = async (page: number = 1) => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: any = { page };
       if (searchTerm) params.q = searchTerm;
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
@@ -117,6 +122,9 @@ export default function GalleryPage() {
 
       const response = await api.get('/media', { params });
       setMedia(response.data.data || []);
+      setCurrentPage(response.data.current_page || 1);
+      setTotalPages(response.data.last_page || 1);
+      setTotalItems(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching media:', error);
     } finally {
@@ -126,7 +134,15 @@ export default function GalleryPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchMedia();
+    setCurrentPage(1);
+    fetchMedia(1);
+  };
+
+  const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    fetchMedia(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const toggleSelect = (id: number, e: React.MouseEvent) => {
@@ -755,6 +771,80 @@ export default function GalleryPage() {
           </table>
         </div>
       )}
+
+      {/* Pagination Controls */}
+      {!loading && media.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-200">
+          <p className="text-sm text-slate-500">
+            Mostrando página <span className="font-semibold text-slate-700">{currentPage}</span> de <span className="font-semibold text-slate-700">{totalPages}</span>
+            <span className="ml-2 text-slate-400">({totalItems} archivos en total)</span>
+          </p>
+          <div className="flex items-center gap-1">
+            {/* First */}
+            <button
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="Primera"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+            </button>
+            {/* Prev */}
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+
+            {/* Page numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let page: number;
+              if (totalPages <= 5) {
+                page = i + 1;
+              } else if (currentPage <= 3) {
+                page = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                page = totalPages - 4 + i;
+              } else {
+                page = currentPage - 2 + i;
+              }
+              return (
+                <button
+                  key={page}
+                  onClick={() => goToPage(page)}
+                  className={`w-9 h-9 text-sm rounded-lg font-medium transition-colors ${
+                    page === currentPage
+                      ? 'bg-[#30669a] text-white shadow-md'
+                      : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+
+            {/* Next */}
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente
+            </button>
+            {/* Last */}
+            <button
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="Última"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Media Viewer Modal - Horizontal Layout with Metadata Panel */}
@@ -1015,6 +1105,27 @@ export default function GalleryPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Categorías (derived from tags) */}
+                {(() => {
+                  const cats = selectedMedia.tags
+                    ?.map((t: any) => typeof t === 'object' && t.category ? t.category : null)
+                    .filter(Boolean)
+                    .filter((c: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === c.id) === i);
+                  if (!cats || cats.length === 0) return null;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-xs text-white/50 mb-2">Categorías</p>
+                      <div className="flex flex-wrap gap-2">
+                        {cats.map((cat: any) => (
+                          <span key={cat.id} className="text-xs bg-purple-500/30 text-purple-200 px-2.5 py-1 rounded-full border border-purple-400/20">
+                            {cat.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Autores */}
                 <div className="mt-4">

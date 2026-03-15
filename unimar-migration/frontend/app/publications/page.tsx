@@ -12,7 +12,7 @@ import {
   faTrash, 
   faEye,
   faFileAlt,
-  faGlobe,
+  faCheck,
   faLock,
   faArchive
 } from '@fortawesome/free-solid-svg-icons';
@@ -107,7 +107,7 @@ export default function PublicationsPage() {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, { bg: string; text: string; icon: typeof faLock }> = {
       draft: { bg: 'bg-amber-100', text: 'text-amber-700', icon: faLock },
-      published: { bg: 'bg-green-100', text: 'text-green-700', icon: faGlobe },
+      published: { bg: 'bg-green-100', text: 'text-green-700', icon: faCheck },
       archived: { bg: 'bg-slate-100', text: 'text-slate-700', icon: faArchive }
     };
     const style = styles[status] || styles.draft;
@@ -221,7 +221,7 @@ export default function PublicationsPage() {
                               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                               title="Publicar"
                             >
-                              <FontAwesomeIcon icon={faGlobe} />
+                              <FontAwesomeIcon icon={faCheck} />
                             </button>
                           )}
                           {pub.status === 'published' && (

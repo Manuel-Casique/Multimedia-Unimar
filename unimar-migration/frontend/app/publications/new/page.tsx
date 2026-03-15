@@ -8,7 +8,7 @@ import AdminLayout from '@/components/AdminLayout';
 import MediaPicker from '@/components/MediaPicker';
 import TagCombobox, { Tag } from '@/components/TagCombobox';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faGlobe, faArrowLeft, faSpinner, faImage, faPhotoFilm, faTags } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faCheck, faArrowLeft, faSpinner, faImage, faPhotoFilm, faTags } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 
@@ -164,7 +164,7 @@ export default function NewPublicationPage() {
             disabled={isBusy}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
           >
-            {publishing ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faGlobe} />}
+            {publishing ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faCheck} />}
             Publicar
           </button>
         </div>

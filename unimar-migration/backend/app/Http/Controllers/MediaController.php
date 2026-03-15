@@ -12,7 +12,7 @@ class MediaController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MediaAsset::with(['user', 'tags', 'authors'])
+        $query = MediaAsset::with(['user', 'tags.category', 'authors'])
             ->orderBy('created_at', 'desc');
 
         if ($request->has('start_date') && $request->start_date) {
@@ -90,6 +90,28 @@ class MediaController extends Controller
             if (!empty($categoryIds)) {
                 $query->whereHas('tags', function ($q) use ($categoryIds) {
                     $q->whereIn('category_id', $categoryIds);
+                });
+            }
+        }
+
+        // Filtrar por autores (via authors[])
+        if ($request->has('authors') && !empty($request->authors)) {
+            $authorsParam = array_filter((array) $request->authors);
+            if (!empty($authorsParam)) {
+                // Support both IDs (numeric) and names (string)
+                $authorIds  = array_filter($authorsParam, 'is_numeric');
+                $authorNames = array_filter($authorsParam, fn($v) => !is_numeric($v));
+                $query->whereHas('authors', function ($q) use ($authorIds, $authorNames) {
+                    $q->where(function($inner) use ($authorIds, $authorNames) {
+                        if (!empty($authorIds)) {
+                            $inner->orWhereIn('authors.id', array_map('intval', $authorIds));
+                        }
+                        if (!empty($authorNames)) {
+                            foreach ($authorNames as $name) {
+                                $inner->orWhere('authors.name', 'like', '%' . $name . '%');
+                            }
+                        }
+                    });
                 });
             }
         }
