@@ -12,6 +12,7 @@ class Publication extends Model
 
     protected $fillable = [
         'created_by',
+        'category_id',
         'title',
         'slug',
         'description',
@@ -20,6 +21,7 @@ class Publication extends Model
         'publication_date',
         'published_at',
         'thumbnail_url',
+        'location',
         'views_count',
         'shares_count',
         'seo_metadata',
@@ -34,7 +36,12 @@ class Publication extends Model
 
     public function authors()
     {
-        return $this->belongsToMany(User::class, 'publication_author');
+        return $this->belongsToMany(Author::class, 'author_publication');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function types()

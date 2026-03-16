@@ -57,6 +57,11 @@ export default function TagCombobox({
     } finally {
       setLoading(false);
     }
+  }, [categoryId, allTags.length]);
+
+  // Clear cached tags when categoryId changes
+  useEffect(() => {
+    setAllTags([]);
   }, [categoryId]);
 
   // Lazy load instead of fetching on mount

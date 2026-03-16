@@ -183,7 +183,6 @@ export default function IngestSidebar() {
     let updatedFiles = [...filesToUpload];
 
     if (hasPendingChanges) {
-       console.log('Auto-applying pending metadata changes before upload...');
        
        const updates: any = {};
        if (bulkData.tags.length > 0) updates.tags = bulkData.tags.map(t => t.name);

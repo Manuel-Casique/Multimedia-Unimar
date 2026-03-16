@@ -12,6 +12,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\AuthorController;
+use App\Http\Controllers\BackupController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,13 +55,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/profile', [SettingsController::class, 'updateProfile']);
     Route::post('/user/photo', [ProfileController::class, 'updatePhoto']);
 
-    // Tags, Locations & Authors — lectura para todos los autenticados
+    // Tags, Locations, Categories & Authors — lectura para todos los autenticados
     Route::get('/tags', [TagController::class, 'index']);
     Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/authors', [AuthorController::class, 'index']);
 
     // Publications (protegidas)
     Route::get('/publications/my', [PublicationController::class, 'myPublications']);
+    Route::get('/publications/stats', [PublicationController::class, 'stats']);
     Route::get('/publications/{id}/edit', [PublicationController::class, 'showById']);
     Route::post('/publications', [PublicationController::class, 'store']);
     Route::put('/publications/{id}', [PublicationController::class, 'update']);
@@ -69,11 +72,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // AI Integrations
     Route::post('/ai/media/{id}/metadata', [\App\Http\Controllers\AIController::class, 'generateMetadataForMedia']);
     Route::post('/ai/media/analyze-base64', [\App\Http\Controllers\AIController::class, 'analyzeBase64']);
+    Route::post('/ai/improve-text', [\App\Http\Controllers\AIController::class, 'improveText']);
+    Route::post('/ai/change-tone', [\App\Http\Controllers\AIController::class, 'changeTone']);
+    Route::post('/ai/fix-spelling', [\App\Http\Controllers\AIController::class, 'fixSpelling']);
 
     // Admin only
     Route::middleware('role:admin')->group(function () {
         // Users
         Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{id}/role', [UserController::class, 'updateRole']);
 
         // Tags CRUD (admin)
@@ -82,7 +89,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/tags/{id}', [TagController::class, 'destroy']);
 
         // Categories CRUD (admin)
-        Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{id}', [CategoryController::class, 'update']);
         Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
@@ -96,5 +102,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/authors', [AuthorController::class, 'store']);
         Route::put('/authors/{id}', [AuthorController::class, 'update']);
         Route::delete('/authors/{id}', [AuthorController::class, 'destroy']);
+
+        // Backups CRUD (admin)
+        Route::get('/backups', [BackupController::class, 'index']);
+        Route::post('/backups', [BackupController::class, 'store']);
+        Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');
+        Route::delete('/backups/{filename}', [BackupController::class, 'destroy'])->where('filename', '.*');
     });
 });

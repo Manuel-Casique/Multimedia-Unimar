@@ -155,6 +155,55 @@ class AIController extends Controller
     }
 
     /**
+     * Cambiar tono del texto
+     * POST /api/ai/change-tone
+     */
+    public function changeTone(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => 'required|string|max:10000',
+            'tone' => 'required|string|in:formal,casual,academico,periodistico',
+        ]);
+
+        try {
+            $result = $this->gemini->changeTone($validated['text'], $validated['tone']);
+
+            return response()->json([
+                'result' => $result,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Error al cambiar el tono',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Corregir ortografía y gramática
+     * POST /api/ai/fix-spelling
+     */
+    public function fixSpelling(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => 'required|string|max:10000',
+        ]);
+
+        try {
+            $result = $this->gemini->fixSpelling($validated['text']);
+
+            return response()->json([
+                'result' => $result,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Error al corregir ortografía',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Generar título y descripción para un MediaAsset ya guardado (desde su imagen en storage)
      * POST /api/ai/media/{id}/metadata
      */

@@ -7,10 +7,12 @@ import api from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import MediaPicker from '@/components/MediaPicker';
 import TagCombobox, { Tag } from '@/components/TagCombobox';
+import AuthorCombobox, { Author } from '@/components/AuthorCombobox';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faCheck, faArrowLeft, faSpinner, faArchive, faImage, faPhotoFilm, faTags } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faCheck, faArrowLeft, faSpinner, faArchive, faImage, faPhotoFilm, faTags, faMapMarkerAlt, faFolderOpen, faUsers } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
+import PublicationAIPanel from '@/components/PublicationAIPanel';
 
 const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
@@ -38,31 +40,40 @@ export default function EditPublicationPage() {
   const [status, setStatus] = useState('draft');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [selectedAuthors, setSelectedAuthors] = useState<Author[]>([]);
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [location, setLocation] = useState('');
+
+  // Lookups
+  const [categories, setCategories] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+
+  // Toast helper
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
+  });
 
   const modules = useMemo(() => ({
     toolbar: {
       container: [
-        [{ header: [1, 2, 3, 4, 5, 6, false] }],
-        [{ font: [] }],
-        [{ size: ['small', false, 'large', 'huge'] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ script: 'sub' }, { script: 'super' }],
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline'],
         [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ direction: 'rtl' }],
         [{ align: [] }],
-        ['blockquote', 'code-block'],
-        ['link', 'image', 'video'],
+        ['blockquote'],
+        ['link', 'image'],
         ['clean'],
       ],
     },
   }), []);
 
   const formats = [
-    'header', 'font', 'size', 'bold', 'italic', 'underline', 'strike',
-    'color', 'background', 'script', 'list', 'bullet', 'indent',
-    'direction', 'align', 'blockquote', 'code-block', 'link', 'image', 'video',
+    'header', 'bold', 'italic', 'underline',
+    'list', 'bullet', 'align', 'blockquote', 'link', 'image',
   ];
 
   useEffect(() => {
@@ -78,6 +89,21 @@ export default function EditPublicationPage() {
     }
   }, [isAuthenticated, _hasHydrated, isAdmin, isEditor, router, id]);
 
+  // Fetch categories & locations
+  useEffect(() => {
+    const fetchLookups = async () => {
+      try {
+        const [catRes, locRes] = await Promise.all([
+          api.get('/categories'),
+          api.get('/locations'),
+        ]);
+        setCategories(catRes.data);
+        setLocations(locRes.data);
+      } catch (e) { /* ignore */ }
+    };
+    if (isAuthenticated) fetchLookups();
+  }, [isAuthenticated]);
+
   const fetchPublication = async () => {
     try {
       const response = await api.get(`/publications/${id}/edit`);
@@ -88,6 +114,8 @@ export default function EditPublicationPage() {
       setPublicationDate(pub.publication_date?.split('T')[0] || '');
       setStatus(pub.status);
       setThumbnailUrl(pub.thumbnail_url || '');
+      setCategoryId(pub.category_id ? String(pub.category_id) : '');
+      setLocation(pub.location || '');
 
       // Cargar tags existentes de la publicación
       if (Array.isArray(pub.tags)) {
@@ -99,8 +127,16 @@ export default function EditPublicationPage() {
           category_name: t.category_name,
         })));
       }
+
+      // Cargar autores existentes
+      if (Array.isArray(pub.authors)) {
+        setSelectedAuthors(pub.authors.map((a: any) => ({
+          id: a.id,
+          name: a.name,
+        })));
+      }
     } catch (error) {
-      Swal.fire('Error', 'No se pudo cargar la publicación.', 'error');
+      Toast.fire({ icon: 'error', title: 'No se pudo cargar la publicación.' });
       router.push('/publications');
     } finally {
       setLoading(false);
@@ -109,15 +145,15 @@ export default function EditPublicationPage() {
 
   const validateForm = (requireContent = false): boolean => {
     if (!title.trim()) {
-      Swal.fire('Campo requerido', 'El título no puede estar vacío.', 'warning');
+      Toast.fire({ icon: 'warning', title: 'El título no puede estar vacío.' });
       return false;
     }
     if (selectedTags.length === 0) {
-      Swal.fire('Etiquetas requeridas', 'Debes seleccionar al menos una etiqueta antes de guardar.', 'warning');
+      Toast.fire({ icon: 'warning', title: 'Selecciona al menos una etiqueta.' });
       return false;
     }
     if (requireContent && !content.trim()) {
-      Swal.fire('Campo requerido', 'El contenido no puede estar vacío para publicar.', 'warning');
+      Toast.fire({ icon: 'warning', title: 'El contenido no puede estar vacío para publicar.' });
       return false;
     }
     return true;
@@ -131,9 +167,12 @@ export default function EditPublicationPage() {
         title,
         description,
         content,
+        category_id: categoryId || null,
+        location: location || null,
         publication_date: publicationDate,
         thumbnail_url: thumbnailUrl,
         tags: selectedTags.map((t) => t.name),
+        author_ids: selectedAuthors.map((a) => a.id),
       };
 
       if (newStatus) data.status = newStatus;
@@ -147,9 +186,9 @@ export default function EditPublicationPage() {
         newStatus === 'archived' ? 'Publicación archivada.' :
         'Cambios guardados.';
 
-      Swal.fire({ icon: 'success', title: 'Guardado', text: message, timer: 1500, showConfirmButton: false });
+      Toast.fire({ icon: 'success', title: message });
     } catch (error: any) {
-      Swal.fire('Error', error.response?.data?.message || 'No se pudo guardar.', 'error');
+      Toast.fire({ icon: 'error', title: error.response?.data?.message || 'No se pudo guardar.' });
     } finally {
       setSaving(false);
     }
@@ -226,9 +265,11 @@ export default function EditPublicationPage() {
             </div>
           </div>
 
+          {/* Form + AI Panel Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
           {/* Form */}
           <div className="space-y-5">
-            {/* Título */}
+            {/* Title + Description Card */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Título <span className="text-red-500">*</span>
@@ -238,91 +279,142 @@ export default function EditPublicationPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ingresa el título de tu publicación"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent text-lg"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent text-lg font-medium"
               />
-            </div>
-
-            {/* Descripción */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Descripción Corta</label>
+              <label className="block text-sm font-medium text-slate-700 mt-5 mb-2">Descripción Corta</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Una breve descripción para el resumen de la publicación"
                 rows={2}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent resize-none text-sm"
               />
             </div>
 
-            {/* Tags — obligatorio */}
+            {/* Category + Tags + Date + Location + Cover — unified card */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-                <FontAwesomeIcon icon={faTags} className="text-[#30669a]" />
-                Etiquetas <span className="text-red-500">*</span>
-                {selectedTags.length === 0 && (
-                  <span className="ml-auto text-xs text-amber-600 font-normal bg-amber-50 px-2 py-0.5 rounded-full">
-                    Mínimo 1 requerida
-                  </span>
-                )}
-              </label>
-              <TagCombobox
-                value={selectedTags}
-                onChange={setSelectedTags}
-                placeholder="Buscar y seleccionar etiquetas..."
-              />
-              <p className="text-[11px] text-slate-400 mt-1.5 italic">
-                Los tags se crean desde Configuración → Catálogo.
-              </p>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Category */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                    <FontAwesomeIcon icon={faFolderOpen} className="text-[#30669a]" />
+                    Categoría
+                  </label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => { setCategoryId(e.target.value); setSelectedTags([]); }}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent text-sm bg-white"
+                  >
+                    <option value="">Todas las categorías</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Portada */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Imagen de Portada</label>
-              <div className="flex items-start gap-4">
-                {thumbnailUrl ? (
-                  <div className="relative w-40 h-24 rounded-lg overflow-hidden border border-slate-200">
-                    <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => setThumbnailUrl('')}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
-                    >×</button>
-                  </div>
-                ) : (
-                  <div className="w-40 h-24 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
-                    <FontAwesomeIcon icon={faImage} className="text-2xl" />
-                  </div>
-                )}
-                <button
-                  onClick={() => { setMediaPickerMode('thumbnail'); setShowMediaPicker(true); }}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#30669a] text-[#30669a] rounded-lg hover:bg-[#30669a]/5 transition-colors"
-                >
-                  <FontAwesomeIcon icon={faPhotoFilm} />
-                  Seleccionar de Galería
-                </button>
+                {/* Tags */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                    <FontAwesomeIcon icon={faTags} className="text-[#30669a]" />
+                    Etiquetas <span className="text-red-500">*</span>
+                    {selectedTags.length === 0 && (
+                      <span className="ml-auto text-xs text-amber-600 font-normal bg-amber-50 px-2 py-0.5 rounded-full">
+                        Mínimo 1
+                      </span>
+                    )}
+                  </label>
+                  <TagCombobox
+                    value={selectedTags}
+                    onChange={setSelectedTags}
+                    categoryId={categoryId ? Number(categoryId) : undefined}
+                    placeholder="Buscar etiquetas..."
+                  />
+                </div>
+
+                {/* Autores */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                    <FontAwesomeIcon icon={faUsers} className="text-[#30669a]" />
+                    Autores <span className="text-xs text-slate-400 font-normal">(opcional)</span>
+                  </label>
+                  <AuthorCombobox
+                    value={selectedAuthors}
+                    onChange={setSelectedAuthors}
+                    placeholder="Buscar autores..."
+                  />
+                </div>
+
+                {/* Fecha */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Fecha de Publicación</label>
+                  <input
+                    type="date"
+                    value={publicationDate}
+                    onChange={(e) => setPublicationDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent cursor-text appearance-none"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Fecha */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Fecha de Publicación</label>
-              <input
-                type="date"
-                value={publicationDate}
-                onChange={(e) => setPublicationDate(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent"
-              />
+              {/* Location + Cover */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 pt-5 border-t border-slate-100">
+                {/* Location */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                    <FontAwesomeIcon icon={faMapMarkerAlt} className="text-[#30669a]" />
+                    Ubicación <span className="text-xs text-slate-400 font-normal">(opcional)</span>
+                  </label>
+                  <select
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#30669a] focus:border-transparent text-sm bg-white"
+                  >
+                    <option value="">Sin ubicación</option>
+                    {locations.map((loc: any) => (
+                      <option key={loc.id} value={loc.name}>{loc.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Portada */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Imagen de Portada</label>
+                  <div className="flex items-center gap-3">
+                    {thumbnailUrl ? (
+                      <div className="relative w-28 h-16 rounded-lg overflow-hidden border border-slate-200">
+                        <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => setThumbnailUrl('')}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] hover:bg-red-600 flex items-center justify-center"
+                        >×</button>
+                      </div>
+                    ) : (
+                      <div className="w-28 h-16 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
+                        <FontAwesomeIcon icon={faImage} className="text-lg" />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { setMediaPickerMode('thumbnail'); setShowMediaPicker(true); }}
+                      className="px-3 py-2 text-xs border border-[#30669a] text-[#30669a] rounded-lg hover:bg-[#30669a]/5 transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faPhotoFilm} className="mr-1.5" />
+                      Galería
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Contenido */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-700">Contenido</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-700">Contenido</label>
                 <button
                   onClick={() => { setMediaPickerMode('content'); setShowMediaPicker(true); }}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm border border-[#30669a] text-[#30669a] rounded-lg hover:bg-[#30669a]/5 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#30669a] text-[#30669a] rounded-lg hover:bg-[#30669a]/5 transition-colors"
                 >
                   <FontAwesomeIcon icon={faPhotoFilm} />
-                  Insertar Imagen de Galería
+                  Insertar Imagen
                 </button>
               </div>
               <div className="quill-wrapper">
@@ -338,6 +430,14 @@ export default function EditPublicationPage() {
                 />
               </div>
             </div>
+
+          </div>
+          {/* AI Side Panel */}
+          <div className="hidden lg:block">
+            <div className="sticky top-6">
+              <PublicationAIPanel content={content} onApplyContent={(newContent) => setContent(newContent)} />
+            </div>
+          </div>
           </div>
 
           <MediaPicker isOpen={showMediaPicker} onClose={() => setShowMediaPicker(false)} onSelect={handleMediaSelect} />

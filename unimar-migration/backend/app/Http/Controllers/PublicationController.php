@@ -8,6 +8,8 @@ use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PublicationController extends Controller
 {
@@ -56,7 +58,7 @@ class PublicationController extends Controller
     {
         $publication = Publication::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['blocks', 'authors', 'types', 'tags'])
+            ->with(['authors', 'types', 'tags', 'category'])
             ->firstOrFail();
 
         return response()->json($publication);
@@ -68,7 +70,7 @@ class PublicationController extends Controller
     public function showById(Request $request, int $id): JsonResponse
     {
         $publication = Publication::where('id', $id)
-            ->with(['tags', 'types', 'authors'])
+            ->with(['tags', 'types', 'authors', 'category'])
             ->firstOrFail();
 
         $this->authorizePublicationAccess($request->user(), $publication);
@@ -94,11 +96,15 @@ class PublicationController extends Controller
             'title'            => 'required|string|max:255',
             'description'      => 'nullable|string',
             'content'          => 'nullable|string',
+            'category_id'      => 'nullable|exists:categories,id',
+            'location'         => 'nullable|string|max:255',
             'publication_date' => 'nullable|date',
             'thumbnail_url'    => 'nullable|string',
             'status'           => 'nullable|in:draft,published,archived',
-            'tags'             => 'nullable|array',
+            'tags'             => 'required|array|min:1',
             'tags.*'           => 'string',
+            'author_ids'       => 'sometimes|array',
+            'author_ids.*'     => 'exists:authors,id',
         ]);
 
         // Validación: mínimo 1 tag
@@ -118,8 +124,12 @@ class PublicationController extends Controller
 
         $publication = Publication::create($validated);
 
-        // Asignar autor
-        $publication->authors()->attach($request->user()->id);
+        // Asignar autores
+        $authorIds = isset($validated['author_ids']) && count($validated['author_ids']) > 0 
+            ? $validated['author_ids'] 
+            : []; // Opcional
+        
+        $publication->authors()->attach($authorIds);
 
         // Sincronizar tags por nombre (resolviendo a IDs)
         $this->syncTagsByName($publication, $validated['tags'] ?? []);
@@ -139,11 +149,15 @@ class PublicationController extends Controller
             'title'            => 'sometimes|string|max:255',
             'description'      => 'sometimes|nullable|string',
             'content'          => 'sometimes|nullable|string',
+            'category_id'      => 'sometimes|nullable|exists:categories,id',
+            'location'         => 'sometimes|nullable|string|max:255',
             'status'           => 'sometimes|in:draft,published,archived',
             'publication_date' => 'sometimes|nullable|date',
             'thumbnail_url'    => 'sometimes|nullable|string',
             'tags'             => 'sometimes|array',
             'tags.*'           => 'string',
+            'author_ids'       => 'sometimes|array',
+            'author_ids.*'     => 'exists:users,id',
         ]);
 
         // Validación: si se envían tags, deben ser mínimo 1
@@ -173,6 +187,14 @@ class PublicationController extends Controller
             $this->syncTagsByName($publication, $tagsToSync);
         }
 
+        // Sincronizar autores si se enviaron
+        if (isset($validated['author_ids'])) {
+            $authorIds = count($validated['author_ids']) > 0 
+                ? $validated['author_ids'] 
+                : []; // Opcional
+            $publication->authors()->sync($authorIds);
+        }
+
         return response()->json($publication->load('tags'));
     }
 
@@ -188,20 +210,85 @@ class PublicationController extends Controller
         return response()->json(['message' => 'Publicación eliminada']);
     }
 
-    /**
-     * Track view
-     */
-    public function trackView(string $slug): JsonResponse
-    {
-        $publication = Publication::where('slug', $slug)->firstOrFail();
-        $publication->increment('views_count');
 
-        return response()->json(['success' => true]);
+
+    /**
+     * Publication statistics
+     */
+    public function stats(Request $request): JsonResponse
+    {
+        $query = Publication::query();
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $total = (clone $query)->count();
+        $totalShares = (clone $query)->sum('shares_count');
+
+        $statusCounts = (clone $query)
+            ->select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        $perDay = (clone $query)
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as count'))
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->map(fn($item) => [
+                'date' => Carbon::parse($item->date)->format('d/m'),
+                'fullDate' => $item->date,
+                'count' => $item->count,
+            ]);
+
+        $byCategory = (clone $query)
+            ->join('categories', 'publications.category_id', '=', 'categories.id')
+            ->select('categories.name', DB::raw('count(*) as count'))
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc('count')
+            ->toBase()
+            ->get()
+            ->map(fn($item) => ['name' => $item->name, 'count' => $item->count]);
+
+        $byAuthor = Publication::join('author_publication', 'publications.id', '=', 'author_publication.publication_id')
+            ->join('authors', 'author_publication.author_id', '=', 'authors.id')
+            ->select('authors.name', DB::raw('count(*) as count'))
+            ->groupBy('authors.id', 'authors.name')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->toBase()
+            ->get()
+            ->map(fn($item) => ['name' => $item->name, 'count' => $item->count]);
+
+
+
+        $recent = Publication::with('tags')
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn($p) => [
+                'id' => $p->id,
+                'title' => $p->title,
+                'status' => $p->status,
+                'time_ago' => $p->created_at->diffForHumans(),
+                'tags' => $p->tags->pluck('name'),
+            ]);
+
+        return response()->json([
+            'total' => $total,
+            'total_shares' => $totalShares,
+            'status_counts' => $statusCounts,
+            'per_day' => $perDay,
+            'by_category' => $byCategory,
+            'by_author' => $byAuthor,
+            'recent' => $recent,
+        ]);
     }
 
-    /**
-     * Helper de Autorización Privada
-     */
     private function authorizePublicationAccess($user, $publication)
     {
         $isAuthor     = $publication->created_by === $user->id;

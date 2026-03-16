@@ -86,6 +86,55 @@ PROMPT;
     }
 
     /**
+     * Cambiar el tono del texto
+     */
+    public function changeTone(string $text, string $tone): string
+    {
+        $toneDescriptions = [
+            'formal'       => 'formal, profesional y respetuoso',
+            'casual'       => 'casual, amigable y cercano',
+            'academico'    => 'académico, riguroso y con vocabulario técnico',
+            'periodistico' => 'periodístico, informativo y objetivo',
+        ];
+
+        $toneDesc = $toneDescriptions[$tone] ?? 'formal, profesional y respetuoso';
+
+        $prompt = <<<PROMPT
+Reescribe el siguiente texto cambiando su tono a uno {$toneDesc}.
+Mantén el mismo significado y toda la información original.
+No agregues ni elimines información, solo cambia el tono y estilo de escritura.
+
+Texto original:
+{$text}
+
+Responde SOLO con el texto reescrito, sin explicaciones adicionales.
+PROMPT;
+
+        return $this->generateText($prompt);
+    }
+
+    /**
+     * Corregir errores ortográficos y gramaticales
+     */
+    public function fixSpelling(string $text): string
+    {
+        $prompt = <<<PROMPT
+Corrige TODOS los errores ortográficos y gramaticales del siguiente texto en español.
+NO cambies el estilo, tono ni significado. Solo corrige errores de:
+- Ortografía (tildes, letras incorrectas)
+- Gramática (concordancia, conjugaciones)
+- Puntuación (comas, puntos)
+
+Texto a corregir:
+{$text}
+
+Responde SOLO con el texto corregido, sin explicaciones adicionales.
+PROMPT;
+
+        return $this->generateText($prompt);
+    }
+
+    /**
      * Generar títulos desde contenido
      */
     public function generateTitles(string $content): array

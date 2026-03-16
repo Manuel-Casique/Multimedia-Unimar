@@ -314,9 +314,7 @@ export default function GalleryPage() {
 
     if (result.isConfirmed) {
       try {
-        console.log('Deleting media IDs:', selectedIds);
         const response = await api.delete('/media/batch', { data: { ids: selectedIds } });
-        console.log('Delete response:', response.data);
         
         toast.success('Eliminado', response.data.message);
         setSelectedIds([]);
