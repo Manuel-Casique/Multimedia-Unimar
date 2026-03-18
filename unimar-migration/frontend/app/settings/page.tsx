@@ -125,7 +125,7 @@ export default function BackupPage() {
       <div className="grid md:grid-cols-3 gap-6 mt-6">
         {/* Generar Respaldo */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+          <div id="backup-generate-card" className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-slate-800 font-bold flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-blue-50 text-[#30669a] flex items-center justify-center">
@@ -155,7 +155,7 @@ export default function BackupPage() {
 
         {/* Historial de Respaldos */}
         <div className="md:col-span-2">
-           <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden h-full">
+           <div id="backup-history-card" className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden h-full">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-slate-800 font-bold flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">

@@ -15,7 +15,8 @@ import {
   faCheck,
   faLock,
   faArchive,
-  faSearch
+  faSearch,
+  faUndo
 } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 
@@ -136,7 +137,7 @@ export default function PublicationsPage() {
         </div>
         <div className="flex items-center gap-3">
           {/* Search */}
-          <div className="relative">
+           <div id="publications-search" className="relative">
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
             <input
               type="text"
@@ -148,6 +149,7 @@ export default function PublicationsPage() {
           </div>
           {(isAdmin() || isEditor()) && (
             <button
+              id="publications-new-btn"
               onClick={() => router.push('/publications/new')}
               className="flex items-center gap-2 px-4 py-2 bg-[#30669a] text-white rounded-lg hover:bg-[#265580] transition-colors font-medium"
             >
@@ -159,7 +161,7 @@ export default function PublicationsPage() {
       </div>
 
       {/* Status Filter Tabs */}
-      <div className="flex gap-1 mb-5 bg-slate-100 p-1 rounded-lg w-fit">
+      <div id="publications-filters" className="flex gap-1 mb-5 bg-slate-100 p-1 rounded-lg w-fit">
         {[
           { value: 'all', label: 'Todos' },
           { value: 'draft', label: 'Borradores' },
@@ -200,7 +202,7 @@ export default function PublicationsPage() {
       ) : (() => {
         const filtered = publications.filter((pub) => {
           const matchesSearch = !search || pub.title.toLowerCase().includes(search.toLowerCase()) || (pub.description && pub.description.toLowerCase().includes(search.toLowerCase()));
-          const matchesStatus = statusFilter === 'all' || pub.status === statusFilter;
+          const matchesStatus = statusFilter === 'all' ? pub.status !== 'archived' : pub.status === statusFilter;
           return matchesSearch && matchesStatus;
         });
 
@@ -211,7 +213,7 @@ export default function PublicationsPage() {
             <p className="text-slate-500">No se encontraron publicaciones con esos filtros.</p>
           </div>
         ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div id="publications-list" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -273,6 +275,15 @@ export default function PublicationsPage() {
                               title="Archivar"
                             >
                               <FontAwesomeIcon icon={faArchive} />
+                            </button>
+                          )}
+                          {pub.status === 'archived' && (
+                            <button
+                              onClick={() => handleStatusChange(pub.id, 'draft')}
+                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                              title="Desarchivar"
+                            >
+                              <FontAwesomeIcon icon={faUndo} />
                             </button>
                           )}
                           <button

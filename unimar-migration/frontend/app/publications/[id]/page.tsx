@@ -42,7 +42,7 @@ export default function ViewPublicationPage() {
 
   if (!_hasHydrated || loading) {
     return (
-      <AdminLayout pageTitle="Cargando..." pageDescription="">
+      <AdminLayout pageTitle="Cargando..." pageDescription="Obteniendo datos de la publicación.">
         <div className="flex justify-center py-20">
           <div className="w-10 h-10 border-4 border-[#30669a] border-t-transparent rounded-full animate-spin" />
         </div>
@@ -55,7 +55,7 @@ export default function ViewPublicationPage() {
   const st = statusLabel[publication.status] || statusLabel.draft;
 
   return (
-    <AdminLayout pageTitle={publication.title} pageDescription="">
+    <AdminLayout pageTitle={publication.title} pageDescription="Vista previa de la publicación seleccionada.">
       {/* Top bar */}
       <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
         <button

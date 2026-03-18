@@ -132,7 +132,7 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-8">
           {/* Quick Access Cards */}
-          <div>
+          <div id="quick-access">
             <h2 className="text-lg font-semibold text-slate-700 mb-4">Acceso Rápido</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {quickAccess.map((item, index) => (
@@ -151,7 +151,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="stats-summary" className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
               <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
                 <FontAwesomeIcon icon={faPhotoFilm} className="w-5 h-5" />
@@ -182,7 +182,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div id="recent-activity" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold flex items-center gap-2 text-slate-700">
                 <FontAwesomeIcon icon={faClock} className="text-[#30669a]" />
@@ -230,7 +230,7 @@ export default function DashboardPage() {
 
           {/* Publications Summary */}
           {stats?.publications && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div id="publications-summary" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-[#30669a]">
                 <h3 className="font-bold flex items-center gap-2 text-white">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -300,7 +300,7 @@ export default function DashboardPage() {
           )}
 
           {/* Taxonomy/Catalog Summary (Mocks + System Info) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div id="catalog-summary" className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50">
                   <h3 className="font-bold flex items-center gap-2 text-indigo-700">

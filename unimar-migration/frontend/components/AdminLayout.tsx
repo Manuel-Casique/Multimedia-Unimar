@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import Sidebar from './Sidebar';
 import FloatingUploadWidget from './FloatingUploadWidget';
+import MaiaAssistant from './MaiaAssistant';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faUser } from '@fortawesome/free-solid-svg-icons';
 
@@ -92,7 +93,7 @@ export default function AdminLayout({
         <main className="flex-1 overflow-auto p-6 bg-[#f0f0f0]">
           <div className="max-w-7xl mx-auto">
             {/* Page Title */}
-            <h1 className="text-2xl font-semibold text-gray-800 mb-2">{pageTitle}</h1>
+            <h1 id="page-title" className="text-2xl font-semibold text-gray-800 mb-2">{pageTitle}</h1>
             {pageDescription && (
               <p className="text-gray-500 text-sm mb-6">{pageDescription}</p>
             )}
@@ -102,6 +103,9 @@ export default function AdminLayout({
           </div>
         </main>
       </div>
+      
+      {/* MAIA Floating Assistant */}
+      <MaiaAssistant />
     </div>
   );
 }

@@ -423,7 +423,7 @@ export default function StatsPage() {
       ) : (
         <div className="space-y-8">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div id="stats-summary" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4 hover:shadow-md transition-shadow">
               <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
                 <FontAwesomeIcon icon={faPhotoFilm} className="w-5 h-5" />
@@ -466,7 +466,7 @@ export default function StatsPage() {
           </div>
 
           {/* Charts - Row 1 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div id="stats-charts" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Timeline Chart */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-semibold text-slate-700 mb-4">Archivos Subidos (Timeline)</h3>

@@ -157,7 +157,7 @@ class PublicationController extends Controller
             'tags'             => 'sometimes|array',
             'tags.*'           => 'string',
             'author_ids'       => 'sometimes|array',
-            'author_ids.*'     => 'exists:users,id',
+            'author_ids.*'     => 'exists:authors,id',
         ]);
 
         // Validación: si se envían tags, deben ser mínimo 1
@@ -220,10 +220,10 @@ class PublicationController extends Controller
         $query = Publication::query();
 
         if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
+            $query->whereDate('publications.created_at', '>=', $request->start_date);
         }
         if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
+            $query->whereDate('publications.created_at', '<=', $request->end_date);
         }
 
         $total = (clone $query)->count();

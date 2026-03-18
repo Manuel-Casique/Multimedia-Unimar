@@ -356,7 +356,7 @@ export default function GalleryPage() {
       {/* Filters + Results fused card */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 mb-4">
         {/* Search bar row */}
-        <div className="p-4 border-b border-slate-100">
+        <div id="gallery-search" className="p-4 border-b border-slate-100">
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative flex-1">
               <input
@@ -388,7 +388,7 @@ export default function GalleryPage() {
         </div>
 
         {/* Filters row */}
-        <div className="px-4 py-3 bg-slate-50/60 border-b border-slate-100">
+        <div id="gallery-filters" className="px-4 py-3 bg-slate-50/60 border-b border-slate-100">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Categorías</label>
@@ -533,7 +533,7 @@ export default function GalleryPage() {
             <p className="text-sm">Sube contenido nuevo o ajusta tus filtros.</p>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="p-4 space-y-8 bg-slate-50">
+          <div id="gallery-grid" className="p-4 space-y-8 bg-slate-50">
             {Object.entries(groupedMedia).map(([date, items]) => (
               <div key={date}>
                 {/* Date Header */}

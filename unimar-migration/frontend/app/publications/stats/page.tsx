@@ -8,10 +8,9 @@ import AdminLayout from '@/components/AdminLayout';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faNewspaper,
-  faEye,
-  faShareNodes,
   faFilter,
   faChartBar,
+  faCalendarDays,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   BarChart,
@@ -38,6 +37,8 @@ interface PubStats {
   recent: Array<{ id: number; title: string; status: string; time_ago: string; tags: string[] }>;
 }
 
+type PeriodType = 'mes' | 'bimestre' | 'trimestre' | 'semestre' | 'anual' | 'custom';
+
 const PIE_COLORS = ['#30669a', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 const STATUS_LABELS: Record<string, string> = { published: 'Publicado', draft: 'Borrador', archived: 'Archivado' };
 const STATUS_COLORS: Record<string, string> = { published: '#10b981', draft: '#f59e0b', archived: '#94a3b8' };
@@ -49,12 +50,18 @@ export default function PublicationStatsPage() {
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('semestre');
 
   useEffect(() => {
     if (!_hasHydrated) return;
     if (!isAuthenticated) { router.push('/login'); return; }
     if (!isAdmin() && !isEditor()) { router.push('/dashboard'); return; }
-    fetchStats();
+    // Set default dates (last 6 months)
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - 6);
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
   }, [_hasHydrated, isAuthenticated]);
 
   const fetchStats = async (start?: string, end?: string) => {
@@ -70,6 +77,29 @@ export default function PublicationStatsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch stats when dates change
+  useEffect(() => {
+    if (startDate && endDate && isAuthenticated) {
+      fetchStats(startDate, endDate);
+    }
+  }, [startDate, endDate, isAuthenticated]);
+
+  const handlePeriodChange = (period: PeriodType) => {
+    setSelectedPeriod(period);
+    const end = new Date();
+    const start = new Date();
+    switch (period) {
+      case 'mes': start.setMonth(start.getMonth() - 1); break;
+      case 'bimestre': start.setMonth(start.getMonth() - 2); break;
+      case 'trimestre': start.setMonth(start.getMonth() - 3); break;
+      case 'semestre': start.setMonth(start.getMonth() - 6); break;
+      case 'anual': start.setFullYear(start.getFullYear() - 1); break;
+      default: return;
+    }
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
   };
 
   const handleFilter = () => fetchStats(startDate, endDate);
@@ -95,34 +125,65 @@ export default function PublicationStatsPage() {
 
   return (
     <AdminLayout pageTitle="Estadísticas de Publicaciones" pageDescription="Métricas y análisis del módulo de publicaciones.">
-      {/* Date Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <FontAwesomeIcon icon={faFilter} className="text-[#30669a]" />
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#30669a] focus:border-transparent"
-        />
-        <span className="text-slate-400 text-sm">hasta</span>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#30669a] focus:border-transparent"
-        />
-        <button onClick={handleFilter} className="px-4 py-1.5 bg-[#30669a] text-white rounded-lg text-sm hover:bg-[#275580] transition-colors">
-          Filtrar
-        </button>
-        {(startDate || endDate) && (
-          <button onClick={clearFilter} className="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-sm underline">
-            Limpiar
-          </button>
-        )}
+      {/* Period Filter Bar — matching multimedia stats style */}
+      <div id="stats-filters" className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 text-slate-600">
+            <FontAwesomeIcon icon={faFilter} className="text-[#30669a]" />
+            <span className="font-medium">Filtrar por fecha:</span>
+          </div>
+
+          {/* Period Buttons */}
+          <div className="flex gap-2">
+            {[
+              { label: 'Mes', value: 'mes' as PeriodType },
+              { label: 'Bimestre', value: 'bimestre' as PeriodType },
+              { label: 'Trimestre', value: 'trimestre' as PeriodType },
+              { label: 'Semestre', value: 'semestre' as PeriodType },
+              { label: 'Anual', value: 'anual' as PeriodType },
+            ].map((btn) => (
+              <button
+                key={btn.value}
+                onClick={() => handlePeriodChange(btn.value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  selectedPeriod === btn.value
+                    ? 'bg-[#30669a] text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Date Inputs */}
+          <div className="flex items-center gap-2 ml-auto">
+            <FontAwesomeIcon icon={faCalendarDays} className="text-slate-400" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setSelectedPeriod('custom');
+              }}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#30669a] focus:border-transparent"
+            />
+            <span className="text-slate-400">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setSelectedPeriod('custom');
+              }}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#30669a] focus:border-transparent"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      {/* KPI Card — Total only */}
+      <div id="stats-cards" className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500 font-medium">Total Publicaciones</p>
@@ -132,19 +193,21 @@ export default function PublicationStatsPage() {
             <FontAwesomeIcon icon={faNewspaper} className="text-xl" />
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Compartidos</p>
-            <p className="text-3xl font-bold text-violet-600 mt-1">{stats.total_shares}</p>
+        {Object.entries(stats.status_counts).map(([key, value]) => (
+          <div key={key} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500 font-medium">{STATUS_LABELS[key] || key}</p>
+              <p className="text-3xl font-bold mt-1" style={{ color: STATUS_COLORS[key] || '#64748b' }}>{value}</p>
+            </div>
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${STATUS_COLORS[key] || '#64748b'}15` }}>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[key] || '#64748b' }} />
+            </div>
           </div>
-          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-lg flex items-center justify-center">
-            <FontAwesomeIcon icon={faShareNodes} className="text-xl" />
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div id="stats-charts" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Timeline — Publicaciones por día */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
