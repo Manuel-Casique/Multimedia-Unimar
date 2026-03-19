@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\MediaAsset;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class MediaController extends Controller
 {
@@ -189,18 +191,21 @@ class MediaController extends Controller
 
     public function destroy(MediaAsset $media)
     {
-        if ($media->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $user = auth()->user();
+
+        // Solo el dueño o el admin pueden eliminar
+        if ($media->user_id !== $user->id && !$user->hasRole('admin')) {
+            return response()->json(['message' => 'No tienes permiso para eliminar este archivo.'], 403);
         }
 
         if ($media->publications()->exists()) {
             return response()->json([
-                'message' => 'Cannot delete this asset because it is currently used in one or more publications.'
+                'message' => 'No se puede eliminar este archivo porque está en uso en una o más publicaciones.'
             ], 422);
         }
 
         if ($media->file_path) {
-            \Storage::disk('public')->delete($media->file_path);
+            Storage::disk('public')->delete($media->file_path);
         }
         $media->delete();
 
@@ -216,14 +221,14 @@ class MediaController extends Controller
             ]);
 
             $ids = $request->input('ids');
-            \Log::info('Batch delete requested', ['ids' => $ids, 'user_id' => auth()->id()]);
+            Log::info('Batch delete requested', ['ids' => $ids, 'user_id' => auth()->id()]);
             
             // Get assets - allow any logged in user to delete (we'll check ownership)
             $user = auth()->user();
             $assets = MediaAsset::whereIn('id', $ids)->get();
 
             if ($assets->count() === 0) {
-                \Log::warning('No assets found for deletion', ['requested_ids' => $ids]);
+                Log::warning('No assets found for deletion', ['requested_ids' => $ids]);
                 return response()->json(['message' => 'No se encontraron archivos para eliminar'], 404);
             }
 
@@ -232,34 +237,44 @@ class MediaController extends Controller
             
             foreach ($assets as $asset) {
                 try {
+                    // Solo el dueño o el admin pueden eliminar cada archivo
+                    if ($asset->user_id !== $user->id && !$user->hasRole('admin')) {
+                        $errors[] = [
+                            'id'    => $asset->id,
+                            'error' => 'No eres el propietario de este archivo'
+                        ];
+                        Log::warning('Batch delete blocked: asset not owned by user', ['asset_id' => $asset->id, 'user_id' => $user->id]);
+                        continue;
+                    }
+
                     // Check if used in publications
                     if ($asset->publications()->exists()) {
                         $errors[] = [
-                            'id' => $asset->id,
+                            'id'    => $asset->id,
                             'error' => 'En uso por publicaciones'
                         ];
-                        \Log::warning('Cannot delete asset in use by publication', ['asset_id' => $asset->id]);
+                        Log::warning('Cannot delete asset in use by publication', ['asset_id' => $asset->id]);
                         continue;
                     }
 
                     // Delete physical file if exists
                     if ($asset->file_path) {
-                        $deleted = \Storage::disk('public')->delete($asset->file_path);
+                        $deleted = Storage::disk('public')->delete($asset->file_path);
                         if (!$deleted) {
-                            \Log::warning('Failed to delete file', ['file_path' => $asset->file_path, 'asset_id' => $asset->id]);
+                            Log::warning('Failed to delete file', ['file_path' => $asset->file_path, 'asset_id' => $asset->id]);
                         }
                     }
-                    
+
                     // Delete database record
                     $asset->delete();
                     $count++;
-                    \Log::info('Asset deleted successfully', ['asset_id' => $asset->id]);
+                    Log::info('Asset deleted successfully', ['asset_id' => $asset->id]);
                 } catch (\Exception $e) {
                     $errors[] = [
                         'id' => $asset->id,
                         'error' => $e->getMessage()
                     ];
-                    \Log::error('Error deleting asset', [
+                    Log::error('Error deleting asset', [
                         'asset_id' => $asset->id,
                         'error' => $e->getMessage()
                     ]);
@@ -274,13 +289,13 @@ class MediaController extends Controller
 
             return response()->json($response);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation error in batch delete', ['errors' => $e->errors()]);
+            Log::error('Validation error in batch delete', ['errors' => $e->errors()]);
             return response()->json([
                 'message' => 'Error de validación',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Unexpected error in batch delete', [
+            Log::error('Unexpected error in batch delete', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

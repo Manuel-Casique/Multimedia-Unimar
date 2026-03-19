@@ -89,7 +89,7 @@ class PopulateMediaDimensions extends Command
                             mkdir(dirname($thumbnailAbsolutePath), 0755, true);
                         }
                         
-                        $image->save($thumbnailAbsolutePath, quality: 60);
+                        $image->save($thumbnailAbsolutePath, 60);
                         $asset->thumbnail_path = $thumbnailRelativePath;
                     } catch (\Exception $e) {
                          $this->warn("Could not generate thumbnail for: {$asset->title}: " . $e->getMessage());

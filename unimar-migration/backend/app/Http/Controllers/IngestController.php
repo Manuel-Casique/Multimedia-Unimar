@@ -6,6 +6,7 @@ use App\Models\MediaAsset;
 use App\Models\UploadBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
@@ -126,7 +127,7 @@ class IngestController extends Controller
             if (!empty($tagsToSync)) {
                 $tagIds = [];
                 foreach ((array)$tagsToSync as $tagName) {
-                    $slug = \Illuminate\Support\Str::slug($tagName);
+                    $slug = Str::slug($tagName);
                     $tagModel = \App\Models\Tag::firstOrCreate(
                         ['slug' => $slug],
                         ['name' => ucfirst($tagName)]
@@ -269,10 +270,10 @@ class IngestController extends Controller
                         mkdir(dirname($thumbnailAbsolutePath), 0755, true);
                     }
                     
-                    $image->save($thumbnailAbsolutePath, quality: 60);
+                    $image->save($thumbnailAbsolutePath, 60);
                     $thumbnailPath = $thumbnailRelativePath;
                 } catch (\Exception $e) {
-                    \Log::error("Error generating image thumbnail: " . $e->getMessage());
+                    Log::error("Error generating image thumbnail: " . $e->getMessage());
                 }
             } elseif ($type === 'video') {
                 try {
@@ -304,7 +305,7 @@ class IngestController extends Controller
                     $thumbnailPath = $thumbnailRelativePath;
 
                 } catch (\Exception $e) {
-                    \Log::error("FFMpeg Error processing video: " . $e->getMessage());
+                    Log::error("FFMpeg Error processing video: " . $e->getMessage());
                 }
             }
 
@@ -342,7 +343,7 @@ class IngestController extends Controller
                 if (!empty($tagsToSync)) {
                     $tagIds = [];
                     foreach ((array)$tagsToSync as $tagName) {
-                        $slug = \Illuminate\Support\Str::slug($tagName);
+                        $slug = Str::slug($tagName);
                         $tagModel = \App\Models\Tag::firstOrCreate(
                             ['slug' => $slug],
                             ['name' => ucfirst($tagName)]

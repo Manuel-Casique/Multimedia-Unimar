@@ -3,95 +3,80 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class BackupController extends Controller
 {
-    private $backupDir;
+    private $diskName;
+    private $backupName;
 
     public function __construct()
     {
-        $this->backupDir = storage_path('app/backups');
-        if (!File::exists($this->backupDir)) {
-            File::makeDirectory($this->backupDir, 0755, true);
-        }
+        // Usa S3 si tienes credenciales, sino cae a local (usando la config general de Laravel/Spatie)
+        $this->diskName = env('BACKUP_DISK', config('backup.backup.destination.disks')[0] ?? 'local');
+        $this->backupName = config('backup.backup.name');
     }
 
     public function index()
     {
-        $files = File::files($this->backupDir);
-        $backups = [];
+        try {
+            $disk = Storage::disk($this->diskName);
+            $files = $disk->files($this->backupName);
+            $backups = [];
 
-        foreach ($files as $file) {
-            if ($file->getExtension() === 'sql') {
-                $backups[] = [
-                    'name' => $file->getFilename(),
-                    'size' => $this->formatSize($file->getSize()),
-                    'date' => date('d M, H:i', $file->getMTime()),
-                    'timestamp' => $file->getMTime(),
-                    'status' => 'Completado'
-                ];
+            foreach ($files as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'zip') {
+                    $backups[] = [
+                        'name' => basename($file),
+                        'size' => $this->formatSize($disk->size($file)),
+                        'date' => date('d M, H:i', $disk->lastModified($file)),
+                        'timestamp' => $disk->lastModified($file),
+                        'status' => 'Completado'
+                    ];
+                }
             }
+
+            // Order by timestamp descending
+            usort($backups, function ($a, $b) {
+                return $b['timestamp'] <=> $a['timestamp'];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $backups,
+                'disk' => $this->diskName
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error reading backups from {$this->diskName}: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al leer los respaldos',
+                'data' => []
+            ], 500);
         }
-
-        // Sort by timestamp descending
-        usort($backups, function ($a, $b) {
-            return $b['timestamp'] <=> $a['timestamp'];
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => $backups
-        ]);
     }
 
     public function store()
     {
         try {
-            $dbName = env('DB_DATABASE');
-            $dbUser = env('DB_USERNAME');
-            $dbPass = env('DB_PASSWORD');
-            $dbHost = env('DB_HOST', '127.0.0.1');
-            $dbPort = env('DB_PORT', '3306');
-
-            $filename = 'backup_unimar_' . date('Ymd_His') . '.sql';
-            $filepath = $this->backupDir . '/' . $filename;
-
-            // Find mysqldump path (fallback for Laragon Windows environments)
-            $mysqldumpPath = 'mysqldump';
-            if (File::exists('C:\laragon\bin\mysql')) {
-                // Find mysqldump.exe inside laragon
-                $dirs = glob('C:\laragon\bin\mysql\*\bin\mysqldump.exe');
-                if (!empty($dirs)) {
-                    $mysqldumpPath = '"' . $dirs[0] . '"';
-                }
-            }
-
-            // Construct mysqldump command
-            $passwordOption = empty($dbPass) ? '' : "-p\"{$dbPass}\"";
-            $command = "{$mysqldumpPath} -h {$dbHost} -P {$dbPort} -u {$dbUser} {$passwordOption} {$dbName} > \"{$filepath}\" 2>&1";
-
-            // Execute
-            exec($command, $output, $returnVar);
-
-            if ($returnVar !== 0) {
-                Log::error("Mysqldump failed: " . implode("\n", $output));
-                throw new \Exception("El comando mysqldump falló. Código: {$returnVar}");
-            }
-
-            // Ensure file was created
-            if (!File::exists($filepath) || File::size($filepath) == 0) {
-                throw new \Exception("El archivo de respaldo no se generó o está vacío.");
-            }
+            // Llama a nuestro wrapper personalizado de Artisan de forma asincrónica si quieres que la API no se quede colgada
+            // O directamente para esperar el resultado. Un backup con archivos a S3 puede tardar minutos,
+            // por lo que es mejor devolver que inició y en background se corra.
+            
+            // Para el backend de PHP es común dispararlo por la cola de trabajos, pero si quieres algo simple ahora:
+            // Usamos runInBackground si es Windows o exec indirecto, pero artisan queue es mejor.
+            
+            // Llama al schedule o directo (esperará que termine)
+            Artisan::call('backup:unimar');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Respaldo generado exitosamente',
-                'file' => $filename
+                'message' => 'Respaldo generado exitosamente.'
             ]);
         } catch (\Exception $e) {
+            Log::error("Backup creation failed: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al generar respaldo: ' . $e->getMessage()
@@ -101,10 +86,23 @@ class BackupController extends Controller
 
     public function download($filename)
     {
-        $filepath = $this->backupDir . '/' . $filename;
+        // Sanitizar el filename para evitar Directory Traversal (solo nos quedamos con el nombre del archivo)
+        $filename = basename($filename);
+        $filepath = $this->backupName . '/' . $filename;
 
-        if (File::exists($filepath)) {
-            return Response::download($filepath);
+        $disk = Storage::disk($this->diskName);
+
+        if ($disk->exists($filepath)) {
+            // Si es Amazon S3, devuelve una URL temporal firmada para descarga directa desde AWS
+            if ($this->diskName === 's3') {
+                $url = $disk->temporaryUrl(
+                    $filepath, now()->addMinutes(5)
+                );
+                return response()->json(['success' => true, 'url' => $url]);
+            }
+
+            // Si es local, lo descarga de manera convencional
+            return $disk->download($filepath);
         }
 
         return response()->json(['success' => false, 'message' => 'Archivo no encontrado'], 404);
@@ -112,10 +110,14 @@ class BackupController extends Controller
     
     public function destroy($filename)
     {
-        $filepath = $this->backupDir . '/' . $filename;
+        // Sanitizar nombre de archivo
+        $filename = basename($filename);
+        $filepath = $this->backupName . '/' . $filename;
 
-        if (File::exists($filepath)) {
-            File::delete($filepath);
+        $disk = Storage::disk($this->diskName);
+
+        if ($disk->exists($filepath)) {
+            $disk->delete($filepath);
             return response()->json(['success' => true, 'message' => 'Respaldo eliminado']);
         }
 

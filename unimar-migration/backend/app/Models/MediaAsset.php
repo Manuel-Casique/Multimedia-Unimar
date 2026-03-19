@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class MediaAsset extends Model
 {
@@ -84,7 +85,7 @@ class MediaAsset extends Model
     public function getFileUrlAttribute(): string
     {
         if ($this->disk === 's3') {
-            return \Storage::disk($this->disk)->url($this->file_path);
+            return Storage::disk($this->disk)->url($this->file_path);
         }
         return asset('storage/' . str_replace('public/', '', $this->file_path));
     }
@@ -98,7 +99,7 @@ class MediaAsset extends Model
             return null;
         }
         if ($this->disk === 's3') {
-            return \Storage::disk($this->disk)->url($this->thumbnail_path);
+            return Storage::disk($this->disk)->url($this->thumbnail_path);
         }
         return asset('storage/' . str_replace('public/', '', $this->thumbnail_path));
     }

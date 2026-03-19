@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Log;
+
 class GeminiService
 {
     protected $apiKey;
@@ -53,7 +55,7 @@ class GeminiService
         curl_close($ch);
 
         if ($httpCode !== 200) {
-            \Log::error('Gemini API Error', ['response' => $response, 'code' => $httpCode]);
+            Log::error('Gemini API Error', ['response' => $response, 'code' => $httpCode]);
             throw new \Exception('Error al comunicarse con Gemini API (HTTP ' . $httpCode . ')');
         }
 
@@ -332,7 +334,7 @@ PROMPT;
         curl_close($ch);
 
         if ($httpCode !== 200) {
-            \Log::error('Gemini Multimodal API Error', ['response' => $response, 'code' => $httpCode]);
+            Log::error('Gemini Multimodal API Error', ['response' => $response, 'code' => $httpCode]);
             throw new \Exception('Error al comunicarse con Gemini API (HTTP ' . $httpCode . ')');
         }
 
@@ -391,7 +393,7 @@ PROMPT;
                 ];
             }
         } catch (\Exception $e) {
-            \Log::error('Error generating title/description with Gemini', ['error' => $e->getMessage()]);
+            Log::error('Error generating title/description with Gemini', ['error' => $e->getMessage()]);
         }
 
         return [

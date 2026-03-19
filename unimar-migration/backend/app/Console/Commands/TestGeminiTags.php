@@ -39,41 +39,19 @@ class TestGeminiTags extends Command
             $imagePath = null;
         }
 
-        $tags = $gemini->generateTagsForMedia(
+        $result = $gemini->generateTitleAndDescription(
             title: $media->title ?? '',
             imagePath: $imagePath,
             mimeType: $media->mime_type ?? 'image/jpeg',
-            description: $media->description ?? '',
-            category: $media->category ?? ''
+            description: $media->description ?? ''
         );
 
-        if (empty($tags)) {
-            $this->warn('Gemini no devolvió etiquetas.');
+        if (empty($result['title']) && empty($result['description'])) {
+            $this->warn('Gemini no devolvió resultados.');
             return;
         }
 
-        $this->info('Etiquetas sugeridas: ' . implode(', ', $tags));
-
-        // Sincronizar etiquetas polimórficas
-        $tagIds = [];
-        foreach ($tags as $tagName) {
-            $slug = \Illuminate\Support\Str::slug($tagName);
-            $tagModel = \App\Models\Tag::firstOrCreate(
-                ['slug' => $slug],
-                ['name' => ucfirst($tagName)]
-            );
-            $tagIds[] = $tagModel->id;
-        }
-
-        $media->tags()->sync($tagIds);
-
-        $this->info('¡Etiquetas guardadas y sincronizadas exitosamente en la Base de Datos!');
-        
-        // Mostrar tags actuales cargando la relación
-        $media->load('tags');
-        $this->table(
-            ['ID', 'Nombre', 'Slug'],
-            $media->tags->map(fn($t) => [$t->id, $t->name, $t->slug])->toArray()
-        );
+        $this->info('Título sugerido: ' . $result['title']);
+        $this->info('Descripción sugerida: ' . $result['description']);
     }
 }

@@ -22,88 +22,104 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Rutas públicas
+// Rutas públicas — sin autenticación
 Route::get('/publications', [PublicationController::class, 'index']);
 Route::get('/publications/view/{slug}', [PublicationController::class, 'show']);
 Route::get('/publication-types', [PublicationController::class, 'types']);
 Route::post('/publications/{slug}/track-view', [PublicationController::class, 'trackView']);
 
-// Autenticación - Rutas públicas
+// Autenticación — rutas públicas
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
-// Autenticación - Rutas protegidas
+// ─────────────────────────────────────────────────────────────────────────────
+// RUTAS PROTEGIDAS — Todos los usuarios autenticados
+// ─────────────────────────────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+
+    Route::get('/user', fn(Request $request) => $request->user());
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    // Ingest Routes
+    // Carga de archivos multimedia (todos los autenticados)
     Route::post('/ingest/upload', [IngestController::class, 'upload']);
     Route::post('/ingest/upload-chunk', [IngestController::class, 'uploadChunk']);
 
-    // Gallery Routes
+    // Galería — ver, editar y eliminar archivos propios
     Route::get('/media', [MediaController::class, 'index']);
-    Route::delete('/media/batch', [MediaController::class, 'destroyBatch']);
     Route::put('/media/{id}', [MediaController::class, 'update']);
     Route::delete('/media/{media}', [MediaController::class, 'destroy']);
 
-    // Dashboard & Settings
+    // Dashboard y perfil propio
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::put('/user/profile', [SettingsController::class, 'updateProfile']);
     Route::post('/user/photo', [ProfileController::class, 'updatePhoto']);
 
-    // Tags, Locations, Categories & Authors — lectura para todos los autenticados
+    // Catálogo — solo lectura para todos los autenticados
     Route::get('/tags', [TagController::class, 'index']);
     Route::get('/locations', [LocationController::class, 'index']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/authors', [AuthorController::class, 'index']);
 
-    // Publications (protegidas)
+    // Publicaciones — solo lectura de las propias publicaciones
     Route::get('/publications/my', [PublicationController::class, 'myPublications']);
-    Route::get('/publications/stats', [PublicationController::class, 'stats']);
     Route::get('/publications/{id}/edit', [PublicationController::class, 'showById']);
-    Route::post('/publications', [PublicationController::class, 'store']);
-    Route::put('/publications/{id}', [PublicationController::class, 'update']);
-    Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
 
-    // AI Integrations
+    // IA / MAIA — disponible para todos los autenticados
     Route::post('/ai/media/{id}/metadata', [\App\Http\Controllers\AIController::class, 'generateMetadataForMedia']);
     Route::post('/ai/media/analyze-base64', [\App\Http\Controllers\AIController::class, 'analyzeBase64']);
     Route::post('/ai/improve-text', [\App\Http\Controllers\AIController::class, 'improveText']);
     Route::post('/ai/change-tone', [\App\Http\Controllers\AIController::class, 'changeTone']);
     Route::post('/ai/fix-spelling', [\App\Http\Controllers\AIController::class, 'fixSpelling']);
 
-    // Admin only
+    // ─────────────────────────────────────────────────────────────────────────
+    // RUTAS DE EDITOR Y ADMIN — Gestión editorial y acciones masivas
+    // ─────────────────────────────────────────────────────────────────────────
+    Route::middleware('role:editor|admin')->group(function () {
+
+        // Publicaciones — CRUD completo (crear, editar, publicar, archivar, eliminar)
+        Route::post('/publications', [PublicationController::class, 'store']);
+        Route::put('/publications/{id}', [PublicationController::class, 'update']);
+        Route::delete('/publications/{id}', [PublicationController::class, 'destroy']);
+
+        // Estadísticas globales de publicaciones
+        Route::get('/publications/stats', [PublicationController::class, 'stats']);
+
+        // Eliminación masiva de archivos multimedia
+        Route::delete('/media/batch', [MediaController::class, 'destroyBatch']);
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RUTAS DE ADMIN — Administración del sistema
+    // ─────────────────────────────────────────────────────────────────────────
     Route::middleware('role:admin')->group(function () {
-        // Users
+
+        // Gestión de usuarios
         Route::get('/users', [UserController::class, 'index']);
         Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{id}/role', [UserController::class, 'updateRole']);
 
-        // Tags CRUD (admin)
+        // Catálogo — Tags
         Route::post('/tags', [TagController::class, 'store']);
         Route::put('/tags/{id}', [TagController::class, 'update']);
         Route::delete('/tags/{id}', [TagController::class, 'destroy']);
 
-        // Categories CRUD (admin)
+        // Catálogo — Categorías
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{id}', [CategoryController::class, 'update']);
         Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
-        // Predefined Locations CRUD (admin)
+        // Catálogo — Ubicaciones predefinidas
         Route::post('/locations', [LocationController::class, 'store']);
         Route::put('/locations/{id}', [LocationController::class, 'update']);
         Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
 
-        // Authors CRUD (admin)
+        // Catálogo — Autores
         Route::post('/authors', [AuthorController::class, 'store']);
         Route::put('/authors/{id}', [AuthorController::class, 'update']);
         Route::delete('/authors/{id}', [AuthorController::class, 'destroy']);
 
-        // Backups CRUD (admin)
+        // Respaldos en AWS S3
         Route::get('/backups', [BackupController::class, 'index']);
         Route::post('/backups', [BackupController::class, 'store']);
         Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');
