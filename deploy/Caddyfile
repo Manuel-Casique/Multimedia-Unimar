@@ -1,0 +1,18 @@
+{
+    auto_https off
+    admin off
+}
+
+:80 {
+    # Route API and Laravel internals to the backend
+    @backend {
+        path /api/*
+        path /sanctum/*
+        path /storage/*
+    }
+
+    reverse_proxy @backend backend:8000
+
+    # Everything else goes to Next.js
+    reverse_proxy frontend:3000
+}

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -18,7 +19,12 @@ const nextConfig = {
       {
          protocol: 'http',
          hostname: '127.0.0.1',
-      }
+      },
+      // Docker production-like environment
+      {
+        protocol: 'http',
+        hostname: 'unimar.localhost',
+      },
     ],
   },
 };
