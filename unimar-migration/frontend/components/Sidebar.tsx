@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
@@ -81,9 +82,11 @@ export default function Sidebar() {
         onClick={() => router.push('/dashboard')}
       >
         <div className="flex items-center gap-2 w-full">
-          <img 
-            src="https://portalunimar.unimar.edu.ve/image/logo-unimar-127.png" 
-            alt="UNIMAR" 
+          <Image
+            src="https://portalunimar.unimar.edu.ve/image/logo-unimar-127.png"
+            alt="UNIMAR"
+            width={40}
+            height={40}
             className="h-10 w-auto object-contain flex-shrink-0"
           />
           {isExpanded && (
