@@ -21,7 +21,7 @@ export default function Home() {
       {/* Welcome Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-800">
-          {greeting}, <span className="text-[#30669a]">{user?.name || 'Administrador'}</span>
+          {greeting}, <span className="text-[#30669a]">{user ? `${user.first_name} ${user.last_name}` : 'Administrador'}</span>
         </h1>
         <p className="text-slate-500 mt-2">Bienvenido al Panel de Control de Multimedia UNIMAR.</p>
       </div>
