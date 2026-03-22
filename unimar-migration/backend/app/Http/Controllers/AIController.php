@@ -33,7 +33,7 @@ class AIController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Error al mejorar texto',
+                'error'   => 'Error al mejorar texto',
                 'message' => $e->getMessage(),
             ], 500);
         }
@@ -69,7 +69,7 @@ class AIController extends Controller
     public function generateSummary(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'content' => 'required|string|max:10000',
+            'content'   => 'required|string|max:10000',
             'max_words' => 'nullable|integer|min:50|max:300',
         ]);
 
@@ -89,14 +89,10 @@ class AIController extends Controller
         }
     }
 
-    /**
-     * Optimizar SEO
-     * POST /api/ai/optimize-seo
-     */
     public function optimizeSEO(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:200',
+            'title'   => 'required|string|max:200',
             'content' => 'required|string|max:10000',
         ]);
 
@@ -154,6 +150,125 @@ class AIController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error al sugerir bloque',
+            ], 500);
+        }
+    }
+
+    /**
+     * Cambiar tono del texto
+     * POST /api/ai/change-tone
+     */
+    public function changeTone(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => 'required|string|max:10000',
+            'tone' => 'required|string|in:formal,casual,academico,periodistico',
+        ]);
+
+        try {
+            $result = $this->gemini->changeTone($validated['text'], $validated['tone']);
+
+            return response()->json([
+                'result' => $result,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Error al cambiar el tono',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Corregir ortografía y gramática
+     * POST /api/ai/fix-spelling
+     */
+    public function fixSpelling(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => 'required|string|max:10000',
+        ]);
+
+        try {
+            $result = $this->gemini->fixSpelling($validated['text']);
+
+            return response()->json([
+                'result' => $result,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Error al corregir ortografía',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generar título y descripción para un MediaAsset ya guardado (desde su imagen en storage)
+     * POST /api/ai/media/{id}/metadata
+     */
+    public function generateMetadataForMedia($id): JsonResponse
+    {
+        try {
+            $media = \App\Models\MediaAsset::findOrFail($id);
+
+            $imagePath = storage_path('app/public/' . str_replace('public/', '', $media->file_path));
+
+            if (!file_exists($imagePath)) {
+                $imagePath = null;
+            }
+
+            $metadata = $this->gemini->generateTitleAndDescription(
+                title: $media->title ?? '',
+                imagePath: $imagePath,
+                mimeType: $media->mime_type ?? 'image/jpeg',
+                description: $media->description ?? ''
+            );
+
+            return response()->json($metadata);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Error al generar metadatos con IA',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Analizar imagen en Base64 desde el frontend ANTES de subirla
+     * POST /api/ai/media/analyze-base64
+     * Devuelve: { title, description }  — sin tags
+     */
+    public function analyzeBase64(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image_base64' => 'required|string',
+            'mime_type'    => 'required|string',
+            'title'        => 'nullable|string|max:200',
+            'description'  => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $base64Data = preg_replace('#^data:image/\w+;base64,#i', '', $validated['image_base64']);
+            $tempImage  = tempnam(sys_get_temp_dir(), 'gemini_img_');
+            file_put_contents($tempImage, base64_decode($base64Data));
+
+            $metadata = $this->gemini->generateTitleAndDescription(
+                title: $validated['title'] ?? 'Sin título',
+                imagePath: $tempImage,
+                mimeType: $validated['mime_type'],
+                description: $validated['description'] ?? ''
+            );
+
+            if (file_exists($tempImage)) {
+                unlink($tempImage);
+            }
+
+            return response()->json($metadata);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Error al analizar imagen con IA',
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

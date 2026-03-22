@@ -11,7 +11,8 @@ class Publication extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'user_id',
+        'created_by',
+        'category_id',
         'title',
         'slug',
         'description',
@@ -20,6 +21,7 @@ class Publication extends Model
         'publication_date',
         'published_at',
         'thumbnail_url',
+        'location',
         'views_count',
         'shares_count',
         'seo_metadata',
@@ -32,19 +34,29 @@ class Publication extends Model
         'publication_date' => 'date',
     ];
 
-    public function blocks()
-    {
-        return $this->hasMany(PublicationBlock::class)->orderBy('order');
-    }
-
     public function authors()
     {
-        return $this->belongsToMany(User::class, 'publication_author');
+        return $this->belongsToMany(Author::class, 'author_publication');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function types()
     {
         return $this->belongsToMany(PublicationType::class, 'publication_publication_type');
+    }
+
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    public function mediaAssets()
+    {
+        return $this->belongsToMany(MediaAsset::class, 'media_asset_publication');
     }
 
     public function analytics()

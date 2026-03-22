@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class MediaAsset extends Model
 {
@@ -15,22 +16,22 @@ class MediaAsset extends Model
         'user_id',
         'title',
         'description',
-        'category',
         'tags',
         'file_path',
+        'disk',
         'original_name',
         'thumbnail_path',
         'mime_type',
         'file_size',
+        'width',
+        'height',
         'status',
         'date_taken',
-        'author',
         'location',
         'exif_data',
     ];
 
     protected $casts = [
-        'tags' => 'array',
         'exif_data' => 'array',
         'file_size' => 'integer',
         'date_taken' => 'datetime',
@@ -83,6 +84,9 @@ class MediaAsset extends Model
      */
     public function getFileUrlAttribute(): string
     {
+        if ($this->disk === 's3') {
+            return Storage::disk($this->disk)->url($this->file_path);
+        }
         return asset('storage/' . str_replace('public/', '', $this->file_path));
     }
 
@@ -93,6 +97,9 @@ class MediaAsset extends Model
     {
         if (!$this->thumbnail_path) {
             return null;
+        }
+        if ($this->disk === 's3') {
+            return Storage::disk($this->disk)->url($this->thumbnail_path);
         }
         return asset('storage/' . str_replace('public/', '', $this->thumbnail_path));
     }
@@ -116,58 +123,42 @@ class MediaAsset extends Model
     }
 
     /**
-     * Get image width (for images only).
+     * Get image width.
      */
-    public function getWidthAttribute(): ?int
+    public function getWidthAttribute($value): ?int
     {
-        if (!$this->file_path || !str_starts_with($this->mime_type ?? '', 'image/')) {
-            return null;
-        }
-        
-        try {
-            $path = storage_path('app/' . $this->file_path);
-            if (!file_exists($path)) {
-                $path = storage_path('app/public/' . str_replace('public/', '', $this->file_path));
-            }
-            
-            if (file_exists($path)) {
-                $size = @getimagesize($path);
-                if ($size) {
-                    return $size[0];
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently fail
-        }
-        
-        return null;
+        return $value;
     }
 
     /**
-     * Get image height (for images only).
+     * Get image height.
      */
-    public function getHeightAttribute(): ?int
+    public function getHeightAttribute($value): ?int
     {
-        if (!$this->file_path || !str_starts_with($this->mime_type ?? '', 'image/')) {
-            return null;
-        }
-        
-        try {
-            $path = storage_path('app/' . $this->file_path);
-            if (!file_exists($path)) {
-                $path = storage_path('app/public/' . str_replace('public/', '', $this->file_path));
-            }
-            
-            if (file_exists($path)) {
-                $size = @getimagesize($path);
-                if ($size) {
-                    return $size[1];
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently fail
-        }
-        
-        return null;
+        return $value;
+    }
+
+    /**
+     * Get all of the tags for the media asset.
+     */
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    /**
+     * Get the publications that use this media asset.
+     */
+    public function publications()
+    {
+        return $this->belongsToMany(Publication::class, 'media_asset_publication');
+    }
+
+    /**
+     * Get the authors of the media asset.
+     */
+    public function authors()
+    {
+        return $this->belongsToMany(Author::class, 'author_media_asset');
     }
 }

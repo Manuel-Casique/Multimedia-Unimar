@@ -47,6 +47,9 @@ class AuthController extends Controller
         // Generar token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Cargar roles
+        $user->load('roles');
+
         return response()->json([
             'message' => 'Login exitoso',
             'token' => $token,
@@ -83,7 +86,11 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Asignar rol por defecto
+        $user->assignRole('usuario');
+
         $token = $user->createToken('auth_token')->plainTextToken;
+        $user->load('roles');
 
         return response()->json([
             'message' => 'Registro exitoso',
@@ -109,8 +116,13 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        if ($user) {
+            $user->load('roles');
+        }
+
         return response()->json([
-            'user' => $request->user()
+            'user' => $user
         ]);
     }
 }

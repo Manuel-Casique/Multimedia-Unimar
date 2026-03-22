@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Log;
+
 class GeminiService
 {
     protected $apiKey;
@@ -53,7 +55,7 @@ class GeminiService
         curl_close($ch);
 
         if ($httpCode !== 200) {
-            \Log::error('Gemini API Error', ['response' => $response, 'code' => $httpCode]);
+            Log::error('Gemini API Error', ['response' => $response, 'code' => $httpCode]);
             throw new \Exception('Error al comunicarse con Gemini API (HTTP ' . $httpCode . ')');
         }
 
@@ -80,6 +82,55 @@ Texto a mejorar:
 {$text}
 
 Responde SOLO con el texto mejorado, sin explicaciones adicionales.
+PROMPT;
+
+        return $this->generateText($prompt);
+    }
+
+    /**
+     * Cambiar el tono del texto
+     */
+    public function changeTone(string $text, string $tone): string
+    {
+        $toneDescriptions = [
+            'formal'       => 'formal, profesional y respetuoso',
+            'casual'       => 'casual, amigable y cercano',
+            'academico'    => 'académico, riguroso y con vocabulario técnico',
+            'periodistico' => 'periodístico, informativo y objetivo',
+        ];
+
+        $toneDesc = $toneDescriptions[$tone] ?? 'formal, profesional y respetuoso';
+
+        $prompt = <<<PROMPT
+Reescribe el siguiente texto cambiando su tono a uno {$toneDesc}.
+Mantén el mismo significado y toda la información original.
+No agregues ni elimines información, solo cambia el tono y estilo de escritura.
+
+Texto original:
+{$text}
+
+Responde SOLO con el texto reescrito, sin explicaciones adicionales.
+PROMPT;
+
+        return $this->generateText($prompt);
+    }
+
+    /**
+     * Corregir errores ortográficos y gramaticales
+     */
+    public function fixSpelling(string $text): string
+    {
+        $prompt = <<<PROMPT
+Corrige TODOS los errores ortográficos y gramaticales del siguiente texto en español.
+NO cambies el estilo, tono ni significado. Solo corrige errores de:
+- Ortografía (tildes, letras incorrectas)
+- Gramática (concordancia, conjugaciones)
+- Puntuación (comas, puntos)
+
+Texto a corregir:
+{$text}
+
+Responde SOLO con el texto corregido, sin explicaciones adicionales.
 PROMPT;
 
         return $this->generateText($prompt);
@@ -236,5 +287,118 @@ PROMPT;
         }
 
         return $context ?: 'No hay bloques aún';
+    }
+
+    /**
+     * Método para generar texto a partir de un texto y una imagen (Multimodal)
+     */
+    private function generateTextWithImage(string $prompt, string $imagePath, string $mimeType): string
+    {
+        $url = $this->apiUrl . '?key=' . $this->apiKey;
+        
+        $imageData = base64_encode(file_get_contents($imagePath));
+
+        $data = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                        [
+                            'inlineData' => [
+                                'mimeType' => $mimeType,
+                                'data' => $imageData
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'maxOutputTokens' => (int) config('services.gemini.max_tokens', 2048),
+                'temperature' => 0.7,
+            ]
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            Log::error('Gemini Multimodal API Error', ['response' => $response, 'code' => $httpCode]);
+            throw new \Exception('Error al comunicarse con Gemini API (HTTP ' . $httpCode . ')');
+        }
+
+        $result = json_decode($response, true);
+        
+        if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+            return $result['candidates'][0]['content']['parts'][0]['text'];
+        }
+
+        throw new \Exception('Respuesta inesperada de Gemini API');
+    }
+
+    /**
+     * Generar título y descripción para un Media Asset usando IA.
+     * Los tags ya NO son responsabilidad de la IA — se gestionan desde el catálogo controlado.
+     */
+    public function generateTitleAndDescription(string $title, ?string $imagePath = null, ?string $mimeType = null, string $description = ''): array
+    {
+        $contextText = "Título Original: {$title}\n";
+        if (!empty($description)) {
+            $contextText .= "Descripción Original: {$description}\n";
+        }
+
+        $prompt = <<<PROMPT
+Actúa como un catalogador experto de medios visuales para una universidad.
+A continuación, analizarás los metadatos base y (si se proporciona) la imagen visual adjunta.
+
+Tu objetivo es generar:
+1. Un 'title': título corto, descriptivo y profesional (máximo 60 caracteres).
+2. Un 'description': texto alternativo (alt text) para accesibilidad, describe literalmente lo que se ve en la imagen con un tono objetivo (máximo 180 caracteres).
+
+Datos proporcionados:
+{$contextText}
+
+Responde ÚNICAMENTE en formato JSON así, sin explicaciones adicionales:
+{
+  "title": "...",
+  "description": "..."
+}
+PROMPT;
+
+        try {
+            if ($imagePath && file_exists($imagePath) && $mimeType) {
+                $response = $this->generateTextWithImage($prompt, $imagePath, $mimeType);
+            } else {
+                $response = $this->generateText($prompt);
+            }
+
+            $response = str_replace(['```json', '```'], '', trim($response));
+            $json = json_decode($response, true);
+
+            if (is_array($json)) {
+                return [
+                    'title'       => $json['title'] ?? '',
+                    'description' => $json['description'] ?? '',
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Error generating title/description with Gemini', ['error' => $e->getMessage()]);
+        }
+
+        return [
+            'title'       => '',
+            'description' => '',
+        ];
     }
 }

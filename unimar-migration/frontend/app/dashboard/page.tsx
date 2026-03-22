@@ -16,7 +16,11 @@ import {
   faImage,
   faVideo,
   faFileAudio,
-  faFile
+  faFile,
+  faTag,
+  faUsers,
+  faUser,
+  faDatabase
 } from '@fortawesome/free-solid-svg-icons';
 
 interface DashboardStats {
@@ -45,11 +49,21 @@ interface DashboardStats {
       time_ago: string;
     }>;
   };
+  catalog?: {
+    categories: number;
+    tags: number;
+    locations: number;
+  };
+  users?: {
+    admins: number;
+    editors: number;
+    users: number;
+  };
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { isAdmin, isAuthenticated, user, _hasHydrated } = useAuthStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -106,9 +120,14 @@ export default function DashboardPage() {
   // Quick access cards
   const quickAccess = [
     { label: 'Subir Archivos', icon: faUpload, href: '/ingest', color: 'bg-blue-500' },
-    { label: 'Ver Galería', icon: faImages, href: '/gallery', color: 'bg-green-500' },
+    { label: 'Ver Galería', icon: faImages, href: '/gallery', color: 'bg-emerald-500' },
     { label: 'Estadísticas', icon: faChartPie, href: '/stats', color: 'bg-purple-500' },
-    { label: 'Configuración', icon: faCog, href: '/settings', color: 'bg-slate-500' },
+    { label: 'Mi Perfil', icon: faUser, href: '/profile', color: 'bg-amber-500' },
+    ...(isAdmin() ? [
+      { label: 'Taxonomía', icon: faTag, href: '/settings/catalog', color: 'bg-indigo-500' },
+      { label: 'Gestión Usuarios', icon: faUsers, href: '/settings/users', color: 'bg-rose-500' },
+      { label: 'Respaldo DB', icon: faDatabase, href: '/settings', color: 'bg-slate-600' }
+    ] : [])
   ];
 
   return (
@@ -123,9 +142,9 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-8">
           {/* Quick Access Cards */}
-          <div>
+          <div id="quick-access">
             <h2 className="text-lg font-semibold text-slate-700 mb-4">Acceso Rápido</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {quickAccess.map((item, index) => (
                 <button
                   key={index}
@@ -142,7 +161,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="stats-summary" className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
               <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
                 <FontAwesomeIcon icon={faPhotoFilm} className="w-5 h-5" />
@@ -173,7 +192,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div id="recent-activity" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold flex items-center gap-2 text-slate-700">
                 <FontAwesomeIcon icon={faClock} className="text-[#30669a]" />
@@ -221,7 +240,7 @@ export default function DashboardPage() {
 
           {/* Publications Summary */}
           {stats?.publications && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div id="publications-summary" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-[#30669a]">
                 <h3 className="font-bold flex items-center gap-2 text-white">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -289,6 +308,100 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+
+          {/* Taxonomy/Catalog Summary (Mocks + System Info) */}
+          <div id="catalog-summary" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50">
+                  <h3 className="font-bold flex items-center gap-2 text-indigo-700">
+                    <FontAwesomeIcon icon={faTag} />
+                    Catálogo y Taxonomía
+                  </h3>
+                  <button 
+                    onClick={() => router.push('/settings/catalog')}
+                    className="text-xs font-medium text-indigo-600 hover:underline"
+                  >
+                    Gestionar
+                  </button>
+                </div>
+                <div className="p-6">
+                   <div className="flex items-center justify-between mb-4">
+                     <div>
+                       <p className="text-sm font-medium text-slate-700">Categorías Activas</p>
+                       <p className="text-xs text-slate-500">Agrupaciones principales</p>
+                     </div>
+                     <span className="text-xl font-bold text-indigo-600">{stats?.catalog?.categories || 0}</span>
+                   </div>
+                   <div className="flex items-center justify-between mb-4">
+                     <div>
+                       <p className="text-sm font-medium text-slate-700">Etiquetas (Tags)</p>
+                       <p className="text-xs text-slate-500">Términos de búsqueda</p>
+                     </div>
+                     <span className="text-xl font-bold text-indigo-600">{stats?.catalog?.tags || 0}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="text-sm font-medium text-slate-700">Ubicaciones</p>
+                       <p className="text-xs text-slate-500">Sedes y espacios físicos</p>
+                     </div>
+                     <span className="text-xl font-bold text-indigo-600">{stats?.catalog?.locations || 0}</span>
+                   </div>
+                </div>
+             </div>
+
+             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-rose-50">
+                  <h3 className="font-bold flex items-center gap-2 text-rose-700">
+                    <FontAwesomeIcon icon={faUsers} />
+                    Usuarios y Permisos
+                  </h3>
+                  <button 
+                    onClick={() => router.push('/settings/users')}
+                    className="text-xs font-medium text-rose-600 hover:underline"
+                  >
+                    Administrar
+                  </button>
+                </div>
+                <div className="p-6">
+                   <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                          <FontAwesomeIcon icon={faUser} className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">Administradores</p>
+                          <p className="text-xs text-slate-500">Acceso total al sistema</p>
+                        </div>
+                     </div>
+                     <span className="text-lg font-bold text-slate-700">{stats?.users?.admins || 0}</span>
+                   </div>
+                   <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                          <FontAwesomeIcon icon={faUsers} className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">Editores</p>
+                          <p className="text-xs text-slate-500">Gestores de contenido</p>
+                        </div>
+                     </div>
+                     <span className="text-lg font-bold text-slate-700">{stats?.users?.editors || 0}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                          <FontAwesomeIcon icon={faUser} className="w-4 h-4 opacity-50" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">Invitados</p>
+                          <p className="text-xs text-slate-500">Solo vista general</p>
+                        </div>
+                     </div>
+                     <span className="text-lg font-bold text-slate-700">{stats?.users?.users || 0}</span>
+                   </div>
+                </div>
+             </div>
+          </div>
 
           {/* Footer */}
           <div className="text-center text-slate-400 text-sm pt-4">

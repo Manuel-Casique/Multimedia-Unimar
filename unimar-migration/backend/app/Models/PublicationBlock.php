@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PublicationBlock extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'publication_id',
         'type',
@@ -18,9 +16,13 @@ class PublicationBlock extends Model
 
     protected $casts = [
         'content' => 'array',
+        'order'   => 'integer',
     ];
 
-    public function publication()
+    /**
+     * Get the publication that owns this block.
+     */
+    public function publication(): BelongsTo
     {
         return $this->belongsTo(Publication::class);
     }

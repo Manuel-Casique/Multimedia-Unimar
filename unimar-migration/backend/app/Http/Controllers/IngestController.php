@@ -6,13 +6,22 @@ use App\Models\MediaAsset;
 use App\Models\UploadBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use FFMpeg\FFMpeg;
+use FFMpeg\Coordinate\TimeCode;
 
 class IngestController extends Controller
 {
     public function upload(Request $request)
     {
+        // Prevent PHP from timing out or hitting memory restrictions when dealing with massive objects (e.g. 500MB videos)
+        set_time_limit(0);
+        ini_set('memory_limit', '2048M');
+
         $request->validate([
             'files' => 'required|array',
             'files.*' => 'required|file|max:512000', // 500MB max per file
@@ -101,20 +110,38 @@ class IngestController extends Controller
             $asset = MediaAsset::create([
                 'upload_batch_id' => $batch->id,
                 'user_id' => $user->id,
-                'title' => $currentMetadata['title'] ?? $originalName,
-                'description' => $currentMetadata['description'] ?? null,
+                'title' => !empty($currentMetadata['title']) ? $currentMetadata['title'] : $originalName,
+                'description' => !empty($currentMetadata['description']) ? $currentMetadata['description'] : null,
                 'file_path' => $path,
                 'original_name' => $originalName,
                 'mime_type' => $mimeType,
                 'file_size' => $file->getSize(),
                 'status' => 'uploaded',
-                'category' => $currentMetadata['category'] ?? null,
-                'tags' => $currentMetadata['tags'] ?? [],
-                'date_taken' => $currentMetadata['date_taken'] ?? $extractedDateTaken,
-                'author' => $currentMetadata['author'] ?? $extractedAuthor,
-                'location' => $currentMetadata['location'] ?? $extractedLocation,
+                'date_taken' => !empty($currentMetadata['date_taken']) ? $currentMetadata['date_taken'] : $extractedDateTaken,
+                'location' => !empty($currentMetadata['location']) ? $currentMetadata['location'] : $extractedLocation,
                 'exif_data' => $exifData,
             ]);
+
+            // Sync tags via the polymorphic relation
+            $tagsToSync = $currentMetadata['tags'] ?? [];
+            if (!empty($tagsToSync)) {
+                $tagIds = [];
+                foreach ((array)$tagsToSync as $tagName) {
+                    $slug = Str::slug($tagName);
+                    $tagModel = \App\Models\Tag::firstOrCreate(
+                        ['slug' => $slug],
+                        ['name' => ucfirst($tagName)]
+                    );
+                    $tagIds[] = $tagModel->id;
+                }
+                $asset->tags()->sync($tagIds);
+            }
+
+            // Sync authors
+            $authorsToSync = $currentMetadata['authors'] ?? [];
+            if (!empty($authorsToSync)) {
+                $asset->authors()->sync($authorsToSync);
+            }
 
                 $savedAssets[] = $asset;
                 $batch->increment('processed_files');
@@ -129,6 +156,217 @@ class IngestController extends Controller
                 'assets' => $savedAssets
             ], 201);
         });
+    }
+
+    public function uploadChunk(Request $request)
+    {
+        // Aumentar tiempo límite y memoria porque procesar y armar archivos pesados puede tardar
+        set_time_limit(0);
+        ini_set('memory_limit', '2048M');
+
+        $request->validate([
+            'file' => 'required|file',
+            'file_id' => 'required|string',
+            'chunk_index' => 'required|integer',
+            'total_chunks' => 'required|integer',
+            'file_name' => 'required|string',
+        ]);
+
+        $fileId = $request->file_id;
+        $chunkIndex = $request->chunk_index;
+        $totalChunks = $request->total_chunks;
+        $originalName = $request->file_name;
+        
+        $chunksDir = storage_path('app/public/media/chunks');
+        if (!file_exists($chunksDir)) {
+            mkdir($chunksDir, 0755, true);
+        }
+
+        $chunkPath = "{$chunksDir}/{$fileId}";
+        
+        // Adjuntar chunk al archivo temporal
+        $chunkFile = $request->file('file');
+        $out = fopen($chunkPath, $chunkIndex == 0 ? 'wb' : 'ab');
+        if (!$out) {
+            return response()->json(['error' => 'No se pudo abrir archivo temporal para escribir'], 500);
+        }
+        $in = fopen($chunkFile->getRealPath(), 'rb');
+        stream_copy_to_stream($in, $out);
+        fclose($in);
+        fclose($out);
+
+        // Si es el último chunk, construimos y procesamos el final
+        if ($chunkIndex == $totalChunks - 1) {
+            $user = $request->user();
+            $metadataStr = $request->file_metadata;
+            $metadata = $metadataStr ? json_decode($metadataStr, true) : [];
+            $mimeType = $request->mime_type ?? 'application/octet-stream';
+
+            // Generar ruta final con UUID
+            $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+            if (!$extension && str_contains($originalName, '.')) {
+                $extArr = explode('.', $originalName);
+                $extension = end($extArr);
+            }
+            $uuid = (string) Str::uuid();
+            $filename = "{$uuid}." . ($extension ?: 'bin');
+            $finalRelativePath = "media/raw/{$filename}";
+            $finalPath = storage_path("app/public/{$finalRelativePath}");
+
+            if (!file_exists(dirname($finalPath))) {
+                mkdir(dirname($finalPath), 0755, true);
+            }
+
+            rename($chunkPath, $finalPath);
+
+            // Determinar tipo
+            $type = 'other';
+            if (str_starts_with($mimeType, 'image/')) $type = 'image';
+            else if (str_starts_with($mimeType, 'video/')) $type = 'video';
+            else if (str_starts_with($mimeType, 'audio/')) $type = 'audio';
+
+            // Extraer EXIF (solo imágenes) y dimensiones
+            $exifData = null;
+            $extractedDateTaken = null;
+            $extractedLocation = null;
+            $extractedAuthor = null;
+            $width = null;
+            $height = null;
+            $thumbnailPath = null;
+
+            if ($type === 'image') {
+                $exifData = $this->extractExifData($finalPath);
+                
+                // Get dims
+                $size = @getimagesize($finalPath);
+                if ($size) {
+                    $width = $size[0];
+                    $height = $size[1];
+                }
+
+                if ($exifData) {
+                    if (isset($exifData['DateTimeOriginal'])) {
+                        try {
+                            $extractedDateTaken = \Carbon\Carbon::createFromFormat('Y:m:d H:i:s', $exifData['DateTimeOriginal']);
+                        } catch (\Exception $e) {}
+                    }
+                    if (isset($exifData['GPSLatitude']) && isset($exifData['GPSLongitude'])) {
+                        $lat = $this->gpsToDecimal($exifData['GPSLatitude'], $exifData['GPSLatitudeRef'] ?? 'N');
+                        $lng = $this->gpsToDecimal($exifData['GPSLongitude'], $exifData['GPSLongitudeRef'] ?? 'E');
+                        $extractedLocation = "{$lat}, {$lng}";
+                    }
+                }
+                // Generate Thumbnail using Intervention Image v3
+                try {
+                    $manager = new ImageManager(new Driver());
+                    $image = $manager->read($finalPath);
+                    $image->scaleDown(width: 400); // Scale proportionally securely down to 400px width
+                    
+                    $thumbnailFilename = "{$uuid}.jpg"; // Always save thumbnails as jpg
+                    $thumbnailRelativePath = "media/thumbnails/{$thumbnailFilename}";
+                    $thumbnailAbsolutePath = storage_path("app/public/{$thumbnailRelativePath}");
+                    
+                    if (!file_exists(dirname($thumbnailAbsolutePath))) {
+                        mkdir(dirname($thumbnailAbsolutePath), 0755, true);
+                    }
+                    
+                    $image->save($thumbnailAbsolutePath, 60);
+                    $thumbnailPath = $thumbnailRelativePath;
+                } catch (\Exception $e) {
+                    Log::error("Error generating image thumbnail: " . $e->getMessage());
+                }
+            } elseif ($type === 'video') {
+                try {
+                    $ffmpeg = FFMpeg::create([
+                        'ffmpeg.binaries'  => 'C:/ffmpeg/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe',
+                        'ffprobe.binaries' => 'C:/ffmpeg/ffmpeg-master-latest-win64-gpl/bin/ffprobe.exe',
+                        'timeout'          => 3600,
+                        'ffmpeg.threads'   => 12,
+                    ]);
+
+                    $video = $ffmpeg->open($finalPath);
+
+                    // Extract Dimensions
+                    $dimension = $video->getStreams()->videos()->first()->getDimensions();
+                    if ($dimension) {
+                        $width = $dimension->getWidth();
+                        $height = $dimension->getHeight();
+                    }
+
+                    // Extract Thumbnail
+                    $thumbnailRelativePath = "media/thumbnails/{$uuid}.jpg";
+                    $thumbnailAbsolutePath = storage_path("app/public/{$thumbnailRelativePath}");
+                    
+                    if (!file_exists(dirname($thumbnailAbsolutePath))) {
+                        mkdir(dirname($thumbnailAbsolutePath), 0755, true);
+                    }
+
+                    $video->frame(TimeCode::fromSeconds(1))->save($thumbnailAbsolutePath);
+                    $thumbnailPath = $thumbnailRelativePath;
+
+                } catch (\Exception $e) {
+                    Log::error("FFMpeg Error processing video: " . $e->getMessage());
+                }
+            }
+
+            // Transacción DB
+            return DB::transaction(function () use ($user, $originalName, $metadata, $mimeType, $finalRelativePath, $finalPath, $extractedDateTaken, $extractedLocation, $exifData, $width, $height, $thumbnailPath) {
+                // Creamos un lote (batch) por archivo
+                $batch = UploadBatch::create([
+                    'user_id' => $user->id,
+                    'status' => 'completed',
+                    'total_files' => 1,
+                    'processed_files' => 1
+                ]);
+
+                // Create asset
+                $asset = MediaAsset::create([
+                    'upload_batch_id' => $batch->id,
+                    'user_id' => $user->id,
+                    'title' => !empty($metadata['title']) ? $metadata['title'] : $originalName,
+                    'description' => !empty($metadata['description']) ? $metadata['description'] : null,
+                    'file_path' => $finalRelativePath,
+                    'thumbnail_path' => $thumbnailPath,
+                    'original_name' => $originalName,
+                    'mime_type' => $mimeType,
+                    'file_size' => filesize($finalPath),
+                    'width' => $width,
+                    'height' => $height,
+                    'status' => 'uploaded',
+                    'date_taken' => !empty($metadata['date_taken']) ? $metadata['date_taken'] : $extractedDateTaken,
+                    'location' => !empty($metadata['location']) ? $metadata['location'] : $extractedLocation,
+                    'exif_data' => $exifData,
+                ]);
+
+                // Sync tags
+                $tagsToSync = $metadata['tags'] ?? [];
+                if (!empty($tagsToSync)) {
+                    $tagIds = [];
+                    foreach ((array)$tagsToSync as $tagName) {
+                        $slug = Str::slug($tagName);
+                        $tagModel = \App\Models\Tag::firstOrCreate(
+                            ['slug' => $slug],
+                            ['name' => ucfirst($tagName)]
+                        );
+                        $tagIds[] = $tagModel->id;
+                    }
+                    $asset->tags()->sync($tagIds);
+                }
+
+                // Sync authors
+                $authorsToSync = $metadata['authors'] ?? [];
+                if (!empty($authorsToSync)) {
+                    $asset->authors()->sync($authorsToSync);
+                }
+
+                return response()->json([
+                    'message' => 'Archivo procesado por completo',
+                    'asset' => $asset
+                ], 201);
+            });
+        }
+
+        return response()->json(['message' => 'Chunk recibido', 'chunk' => $chunkIndex]);
     }
 
     /**
