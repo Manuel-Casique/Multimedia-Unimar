@@ -4,7 +4,7 @@ import Script from 'next/script';
 async function getPublications() {
   try {
     const res = await fetch(`${process.env.BACKEND_URL || 'http://backend:8000/api'}/publications`, {
-      next: { revalidate: 60 } 
+      next: { revalidate: 60 }
     });
     if (!res.ok) return [];
     const json = await res.json();
@@ -22,7 +22,19 @@ export default async function Home() {
   const today = new Date().toLocaleDateString('es-VE');
 
   return (
-    <div>
+    <>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200&display=swap" rel="stylesheet" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/app.css" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/stylecss.css" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/fix.css" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/portalunimar/header.css" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/portalunimar/footer.css" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/portalunimar/home.css" />
+      <link rel="stylesheet" href="https://portalunimar.unimar.edu.ve/css/portalunimar/unimar-radio/home_absolute_btn.css" />
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/3.5.0/mdb.min.css" rel="stylesheet" />
+
       {/* Targeted CSS overrides to fix Tailwind Preflight conflicts with Bootstrap */}
       <style>{`
         #unimar-home-wrapper img {
@@ -202,17 +214,17 @@ export default async function Home() {
 
           {/* Dynamic News Generation + Static Board */}
           <div className="row mx-4">
-            
+
             {/* Contenedor Noticias (Izquierda) */}
             <div className="col-md-9">
               <div className="row">
                 {publications.length > 0 ? publications.map((pub: any) => (
                   <div className="col-sm-6 col-md-4 my-2" key={pub.id}>
                     <div className="card bg-greey border-0 responsive h-100 shadow-sm transition-transform hover:scale-[1.02]">
-                      <img 
-                        src={pub.thumbnail_url || (pub.media_assets && pub.media_assets.length > 0 ? pub.media_assets[0].url : 'https://portalunimar.unimar.edu.ve/image/newsimg/thumb_1772828834.jpg')} 
-                        alt="image-news" 
-                        style={{ borderRadius: '15px 15px 0 0', width: '100%', height: '240px', objectFit: 'cover' }} 
+                      <img
+                        src={pub.thumbnail_url || (pub.media_assets && pub.media_assets.length > 0 ? pub.media_assets[0].url : 'https://portalunimar.unimar.edu.ve/image/newsimg/thumb_1772828834.jpg')}
+                        alt="image-news"
+                        style={{ borderRadius: '15px 15px 0 0', width: '100%', height: '240px', objectFit: 'cover' }}
                       />
                       <div className="card-body d-flex flex-column">
                         <a className="card-link" href={`/publications/view/${pub.slug}`}>
@@ -254,7 +266,7 @@ export default async function Home() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="col-12 my-2" style={{ padding: 0 }}>
                   <div className="row no-gutters bg-greey h-100 rounded overflow-hidden">
                     <div className="col-4 text-white content-date d-flex align-items-center justify-content-center" style={{ backgroundColor: '#30669a' }}>
@@ -266,7 +278,7 @@ export default async function Home() {
                           <a className="card-link" href="/board-unimar/307" style={{ fontSize: '0.85rem' }}>Cronograma de Actividades de la XLIII Promoción.</a>
                         </h5>
                         <div className="card-text text-justify" style={{ fontSize: '0.7rem' }}>
-                          <p className="mb-0">Publicado el cronograma de actividades especiales de la XLIII Promoción “Profa. María Eugenia Morales Gómez”.</p>
+                          <p className="mb-0">Publicado el cronograma de actividades especiales de la XLIII Promoción "Profa. María Eugenia Morales Gómez".</p>
                         </div>
                       </div>
                     </div>
@@ -314,7 +326,7 @@ export default async function Home() {
               <img src="https://portalunimar.unimar.edu.ve/./image/logo-unimar-22.png" alt="UNIMAR" style={{ maxWidth: '180px', marginBottom: '15px' }} />
               <p className="mb-0" style={{ lineHeight: '1.5' }}>Av. Concepción Mariño, Sector El Toporo, El Valle del Espíritu Santo, Edo. Nueva Esparta, Venezuela.</p>
             </div>
-            
+
             {/* Nuestra Institución */}
             <div className="col-lg-2 col-md-6 mb-4">
               <h6 className="font-weight-bold mb-3" style={{ fontSize: '0.95rem' }}>Nuestra Institución</h6>
@@ -366,7 +378,7 @@ export default async function Home() {
               </ul>
             </div>
           </div>
-          
+
           <div className="row mt-4">
             <div className="col-12 text-center text-white" style={{ fontSize: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
               <span>© Copyright 2001-2026 Universidad de Margarita, Rif: J-30660040-0. Isla de Margarita - Venezuela.</span>
@@ -379,6 +391,6 @@ export default async function Home() {
 
       <Script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" strategy="lazyOnload" />
       <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" strategy="lazyOnload" />
-    </div>
+    </>
   );
 }
