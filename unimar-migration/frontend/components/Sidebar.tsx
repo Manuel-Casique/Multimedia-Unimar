@@ -4,9 +4,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faHome,
-  faUpload, 
+import {
+  faUpload,
   faImages, 
   faChartPie, 
   faCog, 
