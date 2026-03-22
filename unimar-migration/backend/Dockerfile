@@ -31,11 +31,12 @@ WORKDIR /app
 
 # Install dependencies first (layer cache)
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
-    && composer dump-autoload --optimize --no-dev
+RUN composer install --no-dev --no-interaction --no-scripts --no-autoloader
 
-# Copy application source
+# Copy application source (artisan must exist before dump-autoload runs scripts)
 COPY . .
+
+RUN composer dump-autoload --optimize --no-dev
 
 # Storage and cache directories must be writable
 RUN chown -R www-data:www-data storage bootstrap/cache \
