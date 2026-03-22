@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { driver, DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
@@ -138,15 +139,17 @@ export default function MaiaAssistant() {
       <button
         id="maia-btn"
         onClick={() => setShowBubble(!showBubble)}
-        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-xl group"
-        style={{
-          background: 'linear-gradient(135deg, #30669a 0%, #1d4773 100%)',
-        }}
+        className="fixed bottom-6 right-6 z-[9999] w-[100px] h-[100px] rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-xl group bg-white"
         title="MAIA — Tu asistente"
       >
-        <span className="text-white font-bold text-xl select-none group-hover:scale-110 transition-transform">
-          M
-        </span>
+        <Image 
+          src="/maia-logo.svg" 
+          alt="MAIA Logo" 
+          width={100} 
+          height={100} 
+          className="w-full h-full object-contain select-none group-hover:scale-125 transition-transform rounded-full"
+          priority
+        />
         <span className="absolute w-full h-full rounded-full border-2 border-[#30669a]/40 animate-ping pointer-events-none" />
       </button>
 
@@ -158,8 +161,14 @@ export default function MaiaAssistant() {
         >
           {/* Header */}
           <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: '#30669a' }}>
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">M</span>
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden">
+              <Image 
+                src="/maia-logo.svg" 
+                alt="MAIA" 
+                width={40} 
+                height={40} 
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <p className="text-white font-bold text-sm leading-tight">MAIA</p>

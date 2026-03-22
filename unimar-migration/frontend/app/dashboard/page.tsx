@@ -49,6 +49,16 @@ interface DashboardStats {
       time_ago: string;
     }>;
   };
+  catalog?: {
+    categories: number;
+    tags: number;
+    locations: number;
+  };
+  users?: {
+    admins: number;
+    editors: number;
+    users: number;
+  };
 }
 
 export default function DashboardPage() {
@@ -320,21 +330,21 @@ export default function DashboardPage() {
                        <p className="text-sm font-medium text-slate-700">Categorías Activas</p>
                        <p className="text-xs text-slate-500">Agrupaciones principales</p>
                      </div>
-                     <span className="text-xl font-bold text-indigo-600">8</span>
+                     <span className="text-xl font-bold text-indigo-600">{stats?.catalog?.categories || 0}</span>
                    </div>
                    <div className="flex items-center justify-between mb-4">
                      <div>
                        <p className="text-sm font-medium text-slate-700">Etiquetas (Tags)</p>
                        <p className="text-xs text-slate-500">Términos de búsqueda</p>
                      </div>
-                     <span className="text-xl font-bold text-indigo-600">24</span>
+                     <span className="text-xl font-bold text-indigo-600">{stats?.catalog?.tags || 0}</span>
                    </div>
                    <div className="flex items-center justify-between">
                      <div>
                        <p className="text-sm font-medium text-slate-700">Ubicaciones</p>
                        <p className="text-xs text-slate-500">Sedes y espacios físicos</p>
                      </div>
-                     <span className="text-xl font-bold text-indigo-600">5</span>
+                     <span className="text-xl font-bold text-indigo-600">{stats?.catalog?.locations || 0}</span>
                    </div>
                 </div>
              </div>
@@ -363,7 +373,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-slate-500">Acceso total al sistema</p>
                         </div>
                      </div>
-                     <span className="text-lg font-bold text-slate-700">2</span>
+                     <span className="text-lg font-bold text-slate-700">{stats?.users?.admins || 0}</span>
                    </div>
                    <div className="flex items-center justify-between mb-4">
                      <div className="flex items-center gap-3">
@@ -375,7 +385,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-slate-500">Gestores de contenido</p>
                         </div>
                      </div>
-                     <span className="text-lg font-bold text-slate-700">5</span>
+                     <span className="text-lg font-bold text-slate-700">{stats?.users?.editors || 0}</span>
                    </div>
                    <div className="flex items-center justify-between">
                      <div className="flex items-center gap-3">
@@ -387,7 +397,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-slate-500">Solo vista general</p>
                         </div>
                      </div>
-                     <span className="text-lg font-bold text-slate-700">12</span>
+                     <span className="text-lg font-bold text-slate-700">{stats?.users?.users || 0}</span>
                    </div>
                 </div>
              </div>

@@ -136,6 +136,18 @@ class DashboardController extends Controller
                 ];
             });
 
+        $catalogStats = [
+            'categories' => \App\Models\Category::count(),
+            'tags' => \App\Models\Tag::count(),
+            'locations' => \App\Models\PredefinedLocation::count(),
+        ];
+
+        $usersStats = [
+            'admins' => \App\Models\User::whereHas('roles', function($q){ $q->where('name', 'admin'); })->count(),
+            'editors' => \App\Models\User::whereHas('roles', function($q){ $q->where('name', 'editor'); })->count(),
+            'users' => \App\Models\User::whereHas('roles', function($q){ $q->where('name', 'user'); })->count(),
+        ];
+
         return response()->json([
             'total_files' => $totalFiles,
             'total_size' => $totalSize,
@@ -150,7 +162,9 @@ class DashboardController extends Controller
                 'total' => $totalPublications,
                 'status_counts' => $pubStatusCounts,
                 'recent' => $recentPublications
-            ]
+            ],
+            'catalog' => $catalogStats,
+            'users' => $usersStats
         ]);
     }
 
