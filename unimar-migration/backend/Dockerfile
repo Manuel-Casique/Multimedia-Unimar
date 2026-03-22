@@ -40,7 +40,8 @@ RUN composer dump-autoload --optimize --no-dev
 
 # Storage and cache directories must be writable
 RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 755 storage bootstrap/cache
+    && chmod -R 755 storage bootstrap/cache \
+    && chmod +x docker-entrypoint.sh
 
 EXPOSE 8000
 
