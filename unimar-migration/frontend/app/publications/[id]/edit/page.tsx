@@ -335,6 +335,7 @@ export default function EditPublicationPage() {
                 </button>
               </div>
               <div className="quill-wrapper">
+                {/* @ts-expect-error react-quill v2 types don't declare ref */}
                 <ReactQuill
                   ref={quillRef}
                   theme="snow"
