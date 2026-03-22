@@ -1,10 +1,9 @@
 import React from 'react';
 import Script from 'next/script';
-import Head from 'next/head';
 
 async function getPublications() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/publications`, { 
+    const res = await fetch(`${process.env.BACKEND_URL || 'http://backend:8000/api'}/publications`, {
       next: { revalidate: 60 } 
     });
     if (!res.ok) return [];
@@ -23,15 +22,7 @@ export default async function Home() {
   const today = new Date().toLocaleDateString('es-VE');
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800">
-          {greeting}, <span className="text-[#30669a]">{user ? `${user.first_name} ${user.last_name}` : 'Administrador'}</span>
-        </h1>
-        <p className="text-slate-500 mt-2">Bienvenido al Panel de Control de Multimedia UNIMAR.</p>
-      </div>
-
+    <div>
       {/* Targeted CSS overrides to fix Tailwind Preflight conflicts with Bootstrap */}
       <style>{`
         #unimar-home-wrapper img {
@@ -388,6 +379,6 @@ export default async function Home() {
 
       <Script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" strategy="lazyOnload" />
       <Script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" strategy="lazyOnload" />
-    </>
+    </div>
   );
 }
