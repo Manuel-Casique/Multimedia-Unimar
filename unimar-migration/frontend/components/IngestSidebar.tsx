@@ -95,7 +95,7 @@ export default function IngestSidebar() {
 
   const handleUpload = async (uploadAll: boolean = false) => {
     // Determine which files to upload
-    let filesToUpload = uploadAll ? files : selectedFiles;
+    const filesToUpload = uploadAll ? files : selectedFiles;
     
     // Safety check
     if (filesToUpload.length === 0) return;
