@@ -20,10 +20,11 @@ import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 
 // Import Quill dynamically
-const ReactQuill = dynamic(() => import('react-quill'), { 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ReactQuill = dynamic(() => import('react-quill'), {
   ssr: false,
-  loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-lg"></div>
-});
+  loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-lg"></div>,
+}) as React.ComponentType<any>;
 
 import 'react-quill/dist/quill.snow.css';
 
@@ -335,7 +336,6 @@ export default function EditPublicationPage() {
                 </button>
               </div>
               <div className="quill-wrapper">
-                {/* @ts-expect-error react-quill v2 types don't declare ref */}
                 <ReactQuill
                   ref={quillRef}
                   theme="snow"
