@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     libzip-dev \
     icu-dev \
     oniguruma-dev \
+    mysql-client \
     linux-headers
 
 # PHP extensions required by the application
