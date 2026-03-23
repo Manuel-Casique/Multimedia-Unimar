@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -36,9 +35,9 @@ class AuthController extends Controller
         }
 
         // Buscar usuario
-        $user = User::where('email', $email)->first();
+        $user = User::with('role')->where('email', $email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user || !Hash::check($request->password, (string) $user?->password)) {
             return response()->json([
                 'message' => 'Credenciales incorrectas.'
             ], 401);
@@ -46,9 +45,6 @@ class AuthController extends Controller
 
         // Generar token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
-
-        // Cargar roles
-        $user->load('roles');
 
         return response()->json([
             'message' => 'Login exitoso',
@@ -79,18 +75,19 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Obtener el rol por defecto 'usuario'
+        $defaultRole = Role::where('name', 'usuario')->firstOrFail();
+
         $user = User::create([
             'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $email,
-            'password' => Hash::make($request->password),
+            'last_name'  => $request->last_name,
+            'email'      => $email,
+            'password'   => Hash::make($request->password),
+            'role_id'    => $defaultRole->id,
         ]);
 
-        // Asignar rol por defecto
-        $user->assignRole('usuario');
-
         $token = $user->createToken('auth_token')->plainTextToken;
-        $user->load('roles');
+        $user->load('role');
 
         return response()->json([
             'message' => 'Registro exitoso',
@@ -118,7 +115,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if ($user) {
-            $user->load('roles');
+            $user->load('role');
         }
 
         return response()->json([

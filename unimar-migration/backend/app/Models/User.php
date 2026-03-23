@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -24,9 +23,8 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password',
-        'google_id',
         'avatar',
-        'profile_photo_path',
+        'role_id',
     ];
 
     /**
@@ -36,7 +34,6 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'remember_token',
     ];
 
     /**
@@ -53,6 +50,38 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the role this user belongs to.
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Check if the user has a given role by name.
+     */
+    public function hasRole(string $roleName): bool
+    {
+        return $this->role?->name === $roleName;
+    }
+
+    /**
+     * Check if the user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    /**
+     * Check if the user is an editor or admin.
+     */
+    public function isEditor(): bool
+    {
+        return $this->hasRole('editor') || $this->hasRole('admin');
+    }
+
+    /**
      * Get the upload batches for this user.
      */
     public function uploadBatches(): HasMany
@@ -66,13 +95,5 @@ class User extends Authenticatable
     public function mediaAssets(): HasMany
     {
         return $this->hasMany(MediaAsset::class);
-    }
-
-    /**
-     * Check if user authenticated via Google OAuth.
-     */
-    public function isGoogleUser(): bool
-    {
-        return !empty($this->google_id);
     }
 }

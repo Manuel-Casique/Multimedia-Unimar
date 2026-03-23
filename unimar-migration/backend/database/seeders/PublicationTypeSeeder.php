@@ -19,11 +19,13 @@ class PublicationTypeSeeder extends Seeder
         ];
 
         foreach ($types as $type) {
-            PublicationType::create([
-                'name' => $type['name'],
-                'slug' => Str::slug($type['name']),
-                'description' => $type['description'],
-            ]);
+            PublicationType::firstOrCreate(
+                ['slug' => Str::slug($type['name'])],
+                [
+                    'name' => $type['name'],
+                    'description' => $type['description'],
+                ]
+            );
         }
     }
 }

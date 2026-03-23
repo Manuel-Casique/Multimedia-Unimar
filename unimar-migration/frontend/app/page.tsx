@@ -37,6 +37,15 @@ export default async function Home() {
 
       {/* Targeted CSS overrides to fix Tailwind Preflight conflicts with Bootstrap */}
       <style>{`
+        @keyframes custom-marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
+        }
+        .marquee-content {
+          display: inline-block;
+          padding-left: 100%;
+          animation: custom-marquee 20s linear infinite;
+        }
         #unimar-home-wrapper img {
           display: inline;
         }
@@ -73,10 +82,12 @@ export default async function Home() {
         {/* Header */}
         <div className="top-bar">
         {/* Dollar Price */}
-        <marquee style={{ backgroundColor: '#d0e0fc', color: '#0b3d91' }}>
-          <i className="fa fa-info-circle" aria-hidden="true"></i>
-          {' '}El valor del dólar, según el BCV, para el día de hoy <span>{today} es </span><strong id="dollar-bcv-price">--</strong>&nbsp;Bs
-        </marquee>
+        <div style={{ backgroundColor: '#d0e0fc', color: '#0b3d91', overflow: 'hidden', whiteSpace: 'nowrap', width: '100%', paddingTop: '2px', paddingBottom: '2px' }}>
+          <div className="marquee-content">
+            <i className="fa fa-info-circle" aria-hidden="true"></i>
+            {' '}El valor del dólar, según el BCV, para el día de hoy <span>{today} es </span><strong id="dollar-bcv-price">--</strong>&nbsp;Bs
+          </div>
+        </div>
 
         {/* Social Media and Others */}
         <div className="container-fluid mt-2">

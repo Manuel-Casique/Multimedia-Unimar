@@ -10,8 +10,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             PublicationTypeSeeder::class,
-            UserSeeder::class,
-            // PublicationSeeder::class, // Crear después
+            AdminUserSeeder::class,
+            CatalogSeeder::class,
         ]);
     }
 }

@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard y perfil propio
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::put('/user/profile', [SettingsController::class, 'updateProfile']);
+    Route::put('/user/password', [SettingsController::class, 'updatePassword']);
     Route::post('/user/photo', [ProfileController::class, 'updatePhoto']);
 
     // Catálogo — solo lectura para todos los autenticados

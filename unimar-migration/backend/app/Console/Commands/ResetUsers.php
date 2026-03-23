@@ -3,53 +3,47 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class ResetUsers extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'app:reset-users';
+    protected $description = 'Resetea los usuarios de prueba manteniendo al admin';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
-
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
-        // Keep admin, delete others
-        \App\Models\User::where('email', '!=', 'admin@unimar.edu.ve')->delete();
+        $adminRole  = Role::where('name', 'admin')->firstOrFail();
+        $editorRole = Role::where('name', 'editor')->firstOrFail();
+        $userRole   = Role::where('name', 'usuario')->firstOrFail();
 
-        $admin = \App\Models\User::where('email', 'admin@unimar.edu.ve')->first();
+        // Mantener admin, eliminar el resto
+        User::where('email', '!=', 'admin@unimar.edu.ve')->forceDelete();
+
+        // Asegurar que el admin tenga su rol
+        $admin = User::where('email', 'admin@unimar.edu.ve')->first();
         if ($admin) {
-            $admin->syncRoles(['admin']);
+            $admin->update(['role_id' => $adminRole->id]);
         }
 
-        // Create Editor
-        $editor = \App\Models\User::create([
+        // Crear Editor de prueba
+        User::create([
             'first_name' => 'Vanessa',
-            'last_name' => 'Casique',
-            'email' => 'vane@unimar.edu.ve',
-            'password' => \Illuminate\Support\Facades\Hash::make('vane123'),
+            'last_name'  => 'Casique',
+            'email'      => 'vane@unimar.edu.ve',
+            'password'   => Hash::make('vane123'),
+            'role_id'    => $editorRole->id,
         ]);
-        $editor->assignRole('editor');
 
-        // Create Usuario
-        $user = \App\Models\User::create([
+        // Crear Usuario de prueba
+        User::create([
             'first_name' => 'Guillermo',
-            'last_name' => 'García',
-            'email' => 'Guille@unimar.edu.ve',
-            'password' => \Illuminate\Support\Facades\Hash::make('Guille123'),
+            'last_name'  => 'García',
+            'email'      => 'guille@unimar.edu.ve',
+            'password'   => Hash::make('Guille123'),
+            'role_id'    => $userRole->id,
         ]);
-        $user->assignRole('usuario');
 
         $this->info('Usuarios reseteados correctamente.');
     }

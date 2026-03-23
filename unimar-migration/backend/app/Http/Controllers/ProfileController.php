@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
@@ -20,23 +19,23 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if ($request->file('photo')) {
-            // Delete old photo if exists and is not a default/external one
-            if ($user->profile_photo_path) {
-                Storage::disk('public')->delete($user->profile_photo_path);
+            // Delete old photo if exists and stored locally (not a URL)
+            if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+                Storage::disk('public')->delete($user->avatar);
             }
 
             $path = $request->file('photo')->store('profile-photos', 'public');
-            
+
             $user->update([
-                'profile_photo_path' => $path,
+                'avatar' => $path,
             ]);
 
             return response()->json([
-                'message' => 'Profile photo updated successfully',
-                'profile_photo_url' => Storage::url($path),
+                'message' => 'Foto de perfil actualizada',
+                'avatar_url' => Storage::url($path),
             ]);
         }
 
-        return response()->json(['message' => 'No photo provided'], 400);
+        return response()->json(['message' => 'No se proporcionó ninguna foto'], 400);
     }
 }
