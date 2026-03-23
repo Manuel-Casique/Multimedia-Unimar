@@ -12,6 +12,9 @@ php artisan storage:link --force 2>/dev/null || true
 # Run pending migrations
 php artisan migrate --force
 
+# Seed initial data (roles, default users, catalog)
+php artisan db:seed --force
+
 # Start Laravel Octane with FrankenPHP
 exec php artisan octane:start \
     --server=frankenphp \
