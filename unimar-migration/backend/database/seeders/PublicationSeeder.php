@@ -100,7 +100,7 @@ class PublicationSeeder extends Seeder
                 'published_at' => $pubData['published_at'],
                 'created_at' => $pubData['created_at'],
                 'updated_at' => $pubData['created_at'],
-                'publication_date' => $pubData['published_at'] ? Carbon::parse($pubData['published_at'])->toDateString() : null,
+                'publication_date' => $pubData['published_at'] ? Carbon::parse($pubData['published_at'])->toDateString() : $pubData['created_at']->toDateString(),
                 'location' => $locations->count() > 0 && rand(0, 1) === 1 ? $locations->random()->name : null,
             ]);
 
