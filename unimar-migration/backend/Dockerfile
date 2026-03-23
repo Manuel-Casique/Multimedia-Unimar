@@ -25,6 +25,10 @@ RUN install-php-extensions \
     bcmath \
     pcntl
 
+# MariaDB connector plugin (must be installed AFTER PHP extensions to avoid .so conflicts)
+# Provides caching_sha2_password.so required by mysqldump to connect to MySQL 8.4
+RUN apk add --no-cache mariadb-connector-c
+
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
