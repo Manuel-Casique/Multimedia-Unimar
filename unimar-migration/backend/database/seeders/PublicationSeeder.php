@@ -15,6 +15,11 @@ class PublicationSeeder extends Seeder
 {
     public function run(): void
     {
+        // Solo sembrar si no hay publicaciones (evitar duplicados en cada reinicio)
+        if (DB::table('publications')->count() > 0) {
+            return;
+        }
+
         $admin = User::whereHas('role', function($q) { $q->where('name', 'admin'); })->first();
         if (!$admin) {
             $admin = User::first();
