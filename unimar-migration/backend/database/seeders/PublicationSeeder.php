@@ -15,14 +15,27 @@ class PublicationSeeder extends Seeder
 {
     public function run(): void
     {
-        // Solo sembrar si no hay publicaciones (evitar duplicados en cada reinicio)
-        if (DB::table('publications')->count() > 0) {
-            return;
+        // Títulos conocidos del seeder — eliminar si ya existen para evitar duplicados
+        $seederTitles = [
+            'Bienvenidos al nuevo periodo académico 2026',
+            'Jornada de Inoculación y Salud en el Campus',
+            'Masterclass: Inteligencia Artificial en la Educación',
+            'Acto de Grado - Promoción LV',
+            'Borrador: Torneo Interuniversitario de Voleibol',
+        ];
+
+        $existingIds = DB::table('publications')->whereIn('title', $seederTitles)->pluck('id');
+        if ($existingIds->isNotEmpty()) {
+            DB::table('taggables')->where('taggable_type', 'App\Models\Publication')->whereIn('taggable_id', $existingIds)->delete();
+            DB::table('publication_publication_type')->whereIn('publication_id', $existingIds)->delete();
+            DB::table('publications')->whereIn('id', $existingIds)->delete();
         }
 
-        $admin = User::whereHas('role', function($q) { $q->where('name', 'admin'); })->first();
-        if (!$admin) {
-            $admin = User::first();
+        // Obtener usuarios reales del sistema
+        $users = User::all();
+        if ($users->isEmpty()) {
+            $this->command->warn('No hay usuarios en el sistema. Corre AdminUserSeeder primero.');
+            return;
         }
 
         $categories = Category::all();
@@ -91,7 +104,9 @@ class PublicationSeeder extends Seeder
             ],
         ];
 
-        foreach ($publications as $pubData) {
+        foreach ($publications as $index => $pubData) {
+            // Rotar entre los usuarios reales del sistema
+            $user = $users[$index % $users->count()];
             $categoryId = $categories->random()->id;
             
             $pubId = DB::table('publications')->insertGetId([
@@ -101,7 +116,7 @@ class PublicationSeeder extends Seeder
                 'content' => $pubData['content'],
                 'status' => $pubData['status'],
                 'category_id' => $categoryId,
-                'created_by' => $admin ? $admin->id : 1,
+                'created_by' => $user->id,
                 'published_at' => $pubData['published_at'],
                 'created_at' => $pubData['created_at'],
                 'updated_at' => $pubData['created_at'],
@@ -118,9 +133,9 @@ class PublicationSeeder extends Seeder
             // Assign 2 to 4 random tags
             if ($tags->count() >= 2) {
                 $randomTags = $tags->random(rand(2, min(4, $tags->count())))->pluck('id');
-                foreach ($randomTags as $tagName) {
+                foreach ($randomTags as $tagId) {
                     DB::table('taggables')->insert([
-                        'tag_id' => $tagName,
+                        'tag_id' => $tagId,
                         'taggable_id' => $pubId,
                         'taggable_type' => 'App\Models\Publication'
                     ]);
