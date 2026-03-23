@@ -56,6 +56,10 @@ class UserController extends Controller
             'role' => 'required|string|in:admin,editor,usuario'
         ]);
 
+        if ($request->user()->id == $id) {
+            return response()->json(['message' => 'No puedes cambiar tu propio rol por razones de seguridad.'], 403);
+        }
+
         $user = User::findOrFail($id);
         $role = Role::where('name', $request->role)->firstOrFail();
 
