@@ -59,6 +59,7 @@ return [
             ]) : [],
             'dump' => [
                 'dump_binary_path' => env('MYSQLDUMP_PATH', !empty(glob('C:\laragon\bin\mysql\*\bin', GLOB_ONLYDIR)) ? glob('C:\laragon\bin\mysql\*\bin', GLOB_ONLYDIR)[0] . '\\' : ''),
+                'add_extra_option' => '--skip-ssl',
             ],
         ],
 
