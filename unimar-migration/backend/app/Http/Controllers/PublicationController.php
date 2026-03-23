@@ -37,16 +37,21 @@ class PublicationController extends Controller
     public function myPublications(Request $request): JsonResponse
     {
         $userId = $request->user()->id;
-        $publications = Publication::with(['types', 'authors', 'tags'])
-            ->where(function($q) use ($userId) {
+        $isAdminOrEditor = $request->user()->hasAnyRole(['admin', 'editor']);
+
+        $query = Publication::with(['types', 'authors', 'tags']);
+
+        if (!$isAdminOrEditor) {
+            $query->where(function($q) use ($userId) {
                 $q->whereIn('status', ['published', 'archived'])
                   ->orWhere(function($subQ) use ($userId) {
                       $subQ->where('status', 'draft')
                            ->where('created_by', $userId);
                   });
-            })
-            ->orderBy('updated_at', 'desc')
-            ->get();
+            });
+        }
+
+        $publications = $query->orderBy('updated_at', 'desc')->get();
 
         return response()->json($publications);
     }
@@ -292,12 +297,7 @@ class PublicationController extends Controller
     private function authorizePublicationAccess($user, $publication)
     {
         $isAuthor     = $publication->created_by === $user->id;
-        $isDraft      = $publication->status === 'draft';
         $hasPrivileges = $user->hasAnyRole(['admin', 'editor']);
-
-        if ($isDraft && !$isAuthor) {
-            abort(403, 'No tienes permiso para ver o editar este borrador, solo su autor puede hacerlo.');
-        }
 
         if (!$isAuthor && !$hasPrivileges) {
             abort(403, 'No tienes privilegios para interactuar con esta publicación.');
