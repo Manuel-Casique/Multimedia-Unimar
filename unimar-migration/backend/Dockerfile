@@ -11,7 +11,8 @@ RUN apk add --no-cache \
     icu-dev \
     oniguruma-dev \
     mysql-client \
-    linux-headers
+    linux-headers \
+    ffmpeg
 
 # PHP extensions required by the application
 RUN install-php-extensions \

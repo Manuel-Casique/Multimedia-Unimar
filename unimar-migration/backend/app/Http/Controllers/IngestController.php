@@ -278,8 +278,8 @@ class IngestController extends Controller
             } elseif ($type === 'video') {
                 try {
                     $ffmpeg = FFMpeg::create([
-                        'ffmpeg.binaries'  => 'C:/ffmpeg/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe',
-                        'ffprobe.binaries' => 'C:/ffmpeg/ffmpeg-master-latest-win64-gpl/bin/ffprobe.exe',
+                        'ffmpeg.binaries'  => '/usr/bin/ffmpeg',
+                        'ffprobe.binaries' => '/usr/bin/ffprobe',
                         'timeout'          => 3600,
                         'ffmpeg.threads'   => 12,
                     ]);
