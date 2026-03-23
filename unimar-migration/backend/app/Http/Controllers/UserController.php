@@ -3,17 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
     /**
-     * List all users
+     * List all users with their roles
      */
     public function index()
     {
-        $users = User::with('roles')->get();
+        $users = User::with('role')->get();
         return response()->json($users);
     }
 
@@ -30,18 +31,19 @@ class UserController extends Controller
             'role'       => 'required|string|in:admin,editor,usuario',
         ]);
 
+        $role = Role::where('name', $request->role)->firstOrFail();
+
         $user = User::create([
             'first_name' => $request->first_name,
             'last_name'  => $request->last_name,
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
+            'role_id'    => $role->id,
         ]);
-
-        $user->assignRole($request->role);
 
         return response()->json([
             'message' => 'Usuario creado exitosamente',
-            'user'    => $user->load('roles'),
+            'user'    => $user->load('role'),
         ], 201);
     }
 
@@ -55,14 +57,13 @@ class UserController extends Controller
         ]);
 
         $user = User::findOrFail($id);
-        
-        // Sync roles (remove old, add new)
-        $user->syncRoles([$request->role]);
+        $role = Role::where('name', $request->role)->firstOrFail();
+
+        $user->update(['role_id' => $role->id]);
 
         return response()->json([
             'message' => 'Rol actualizado correctamente',
-            'user' => $user->load('roles')
+            'user' => $user->load('role')
         ]);
     }
 }
-
