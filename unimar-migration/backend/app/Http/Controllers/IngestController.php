@@ -413,11 +413,29 @@ class IngestController extends Controller
                 }
             }
 
-            return empty($cleanExif) ? null : $cleanExif;
+            return empty($cleanExif) ? null : $this->sanitizeUtf8($cleanExif);
             
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Recursively sanitize data to ensure valid UTF-8 for JSON encoding
+     */
+    private function sanitizeUtf8($data)
+    {
+        if (is_array($data)) {
+            $result = [];
+            foreach ($data as $key => $value) {
+                $result[$key] = $this->sanitizeUtf8($value);
+            }
+            return $result;
+        }
+        if (is_string($data)) {
+            return mb_scrub($data, 'UTF-8');
+        }
+        return $data;
     }
 
     /**
