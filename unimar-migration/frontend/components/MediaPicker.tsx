@@ -15,9 +15,11 @@ interface MediaAsset {
   id: number;
   title: string;
   file_path: string;
+  file_url: string;
   original_name: string;
   mime_type: string;
   thumbnail_path: string | null;
+  thumbnail_url: string | null;
 }
 
 interface MediaPickerProps {
@@ -33,7 +35,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, multiple = fals
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 
   useEffect(() => {
     if (isOpen) {
@@ -62,12 +64,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect, multiple = fals
   };
 
   const getImageUrl = (asset: MediaAsset) => {
-    const path = asset.thumbnail_path || asset.file_path;
-    return `${backendUrl}/storage/${path}`;
+    return asset.thumbnail_url || asset.file_url;
   };
 
   const getFullImageUrl = (asset: MediaAsset) => {
-    return `${backendUrl}/storage/${asset.file_path}`;
+    return asset.file_url;
   };
 
   const filteredAssets = assets.filter(asset => 
