@@ -13,7 +13,7 @@ export interface User {
   avatar?: string | null;
   profile_photo_path?: string | null;
   profile_photo_url?: string | null;
-  roles?: { id: number; name: string }[];
+  role?: { id: number; name: string; description?: string };
 }
 
 interface AuthState {
@@ -55,16 +55,24 @@ export const useAuthStore = create<AuthState>()(
 
       isAdmin: () => {
         const user = get().user;
-        if (user && user.roles) {
-          return user.roles.some((r) => r.name === 'admin');
+        if (user && user.role) {
+          return user.role.name === 'admin';
+        }
+        // Fallback for old cached states
+        if (user && (user as any).roles && (user as any).roles.length > 0) {
+           return (user as any).roles.some((r: any) => r.name === 'admin');
         }
         return false;
       },
 
       isEditor: () => {
         const user = get().user;
-        if (user && user.roles) {
-          return user.roles.some((r) => r.name === 'editor' || r.name === 'admin');
+        if (user && user.role) {
+          return user.role.name === 'editor' || user.role.name === 'admin';
+        }
+        // Fallback for old cached states
+        if (user && (user as any).roles && (user as any).roles.length > 0) {
+           return (user as any).roles.some((r: any) => r.name === 'editor' || r.name === 'admin');
         }
         return false;
       }

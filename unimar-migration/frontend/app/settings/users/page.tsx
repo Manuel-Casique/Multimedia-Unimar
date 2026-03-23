@@ -134,7 +134,7 @@ export default function UsersManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => {
-                   const currentRole = u.roles && u.roles.length > 0 ? u.roles[0].name : 'usuario';
+                   const currentRole = u.role ? u.role.name : 'usuario';
                    const badge = getRoleBadge(currentRole);
                    
                    return (
