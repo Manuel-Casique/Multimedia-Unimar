@@ -20,7 +20,13 @@ class RoleMiddleware
             return response()->json(['message' => 'Acceso denegado.'], 403);
         }
 
-        if (!in_array($user->role->name, $roles)) {
+        // Support Spatie's pipe syntax (role:editor|admin)
+        $allowedRoles = [];
+        foreach ($roles as $r) {
+            $allowedRoles = array_merge($allowedRoles, explode('|', $r));
+        }
+
+        if (!in_array($user->role->name, $allowedRoles)) {
             return response()->json(['message' => 'No tienes permisos suficientes para esta acción.'], 403);
         }
 

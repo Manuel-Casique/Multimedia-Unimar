@@ -143,9 +143,9 @@ class DashboardController extends Controller
         ];
 
         $usersStats = [
-            'admins' => \App\Models\User::whereHas('roles', function($q){ $q->where('name', 'admin'); })->count(),
-            'editors' => \App\Models\User::whereHas('roles', function($q){ $q->where('name', 'editor'); })->count(),
-            'users' => \App\Models\User::whereHas('roles', function($q){ $q->where('name', 'user'); })->count(),
+            'admins' => \App\Models\User::whereHas('role', function($q){ $q->where('name', 'admin'); })->count(),
+            'editors' => \App\Models\User::whereHas('role', function($q){ $q->where('name', 'editor'); })->count(),
+            'users' => \App\Models\User::whereHas('role', function($q){ $q->where('name', 'usuario'); })->count(),
         ];
 
         return response()->json([
