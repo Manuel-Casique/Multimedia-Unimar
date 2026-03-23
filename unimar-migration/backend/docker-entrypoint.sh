@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -e
 
+# Rebuild package manifest (clears any stale provider references from removed packages)
+php artisan clear-compiled
+php artisan package:discover --ansi 2>/dev/null || true
+
 # Cache configuration, routes and views with the actual runtime env vars
 php artisan config:cache
 php artisan route:cache
