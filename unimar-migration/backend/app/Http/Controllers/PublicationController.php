@@ -37,7 +37,7 @@ class PublicationController extends Controller
     public function myPublications(Request $request): JsonResponse
     {
         $userId = $request->user()->id;
-        $isAdminOrEditor = $request->user()->hasAnyRole(['admin', 'editor']);
+        $isAdminOrEditor = $request->user()->isEditor();
 
         $query = Publication::with(['types', 'authors', 'tags']);
 
@@ -297,7 +297,7 @@ class PublicationController extends Controller
     private function authorizePublicationAccess($user, $publication)
     {
         $isAuthor     = $publication->created_by === $user->id;
-        $hasPrivileges = $user->hasAnyRole(['admin', 'editor']);
+        $hasPrivileges = $user->isEditor();
 
         if (!$isAuthor && !$hasPrivileges) {
             abort(403, 'No tienes privilegios para interactuar con esta publicación.');
