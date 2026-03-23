@@ -36,7 +36,7 @@ RUN composer install --no-dev --no-interaction --no-scripts --no-autoloader
 # Copy application source (artisan must exist before dump-autoload runs scripts)
 COPY . .
 
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --optimize --no-dev --no-scripts
 
 # Storage and cache directories must be writable
 RUN chown -R www-data:www-data storage bootstrap/cache \
