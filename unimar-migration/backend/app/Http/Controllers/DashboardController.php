@@ -91,15 +91,15 @@ class DashboardController extends Controller
         // Author Distribution
         $authorDistribution = (clone $query)
             ->join('users', 'media_assets.user_id', '=', 'users.id')
-            ->select('users.first_name', 'users.last_name', DB::raw('count(*) as count'))
-            ->groupBy('users.id', 'users.first_name', 'users.last_name')
+            ->select('users.name', DB::raw('count(*) as count'))
+            ->groupBy('users.id', 'users.name')
             ->orderByDesc('count')
             ->limit(10)
             ->toBase()
             ->get()
             ->map(function ($item) {
                 return [
-                    'name' => trim($item->first_name . ' ' . $item->last_name),
+                    'name' => trim($item->name),
                     'count' => $item->count
                 ];
             });
