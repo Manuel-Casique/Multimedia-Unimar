@@ -29,6 +29,9 @@ RUN install-php-extensions \
 # Provides caching_sha2_password.so required by mysqldump to connect to MySQL 8.4
 RUN apk add --no-cache mariadb-connector-c
 
+# Custom PHP limits for large file uploads (videos up to 1 GB)
+COPY docker/php-uploads.ini /usr/local/etc/php/conf.d/99-uploads.ini
+
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
