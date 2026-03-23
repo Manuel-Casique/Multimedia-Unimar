@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import api from '@/lib/api';
+import { editorJsToHtml } from '@/lib/editorjs';
 import AdminLayout from '@/components/AdminLayout';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faEdit, faCalendar, faTags, faMapMarkerAlt, faFolderOpen, faEye } from '@fortawesome/free-solid-svg-icons';
@@ -153,7 +154,7 @@ export default function ViewPublicationPage() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
         <div
           className="prose prose-slate max-w-none prose-headings:text-slate-800 prose-a:text-[#30669a] prose-img:rounded-lg prose-img:mx-auto"
-          dangerouslySetInnerHTML={{ __html: publication.content || '<p class="text-slate-400 italic">Sin contenido.</p>' }}
+          dangerouslySetInnerHTML={{ __html: editorJsToHtml(publication.content) || '<p class="text-slate-400 italic">Sin contenido.</p>' }}
         />
       </div>
 

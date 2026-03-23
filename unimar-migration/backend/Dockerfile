@@ -11,7 +11,6 @@ RUN apk add --no-cache \
     icu-dev \
     oniguruma-dev \
     mysql-client \
-    mariadb-connector-c \
     linux-headers
 
 # PHP extensions required by the application
