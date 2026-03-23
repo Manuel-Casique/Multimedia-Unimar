@@ -4,6 +4,11 @@
 }
 
 :80 {
+    # Allow large file uploads (videos up to 1 GB)
+    request_body {
+        max_size 1536MB
+    }
+
     # Route API and Laravel internals to the backend
     @backend {
         path /api/*
