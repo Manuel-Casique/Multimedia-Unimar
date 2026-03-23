@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 set -e
 
-# Rebuild package manifest (clears any stale provider references from removed packages)
-php artisan clear-compiled
+# Forcefully delete cached files before booting Artisan (otherwise artisan will crash on boot)
+rm -f bootstrap/cache/packages.php bootstrap/cache/services.php bootstrap/cache/config.php bootstrap/cache/routes.php
+
 php artisan package:discover --ansi 2>/dev/null || true
 
 # Cache configuration, routes and views with the actual runtime env vars
