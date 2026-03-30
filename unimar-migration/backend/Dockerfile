@@ -48,7 +48,8 @@ COPY . .
 RUN composer dump-autoload --optimize --no-dev --no-scripts
 
 # Storage and cache directories must be writable
-RUN chown -R www-data:www-data storage bootstrap/cache \
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 755 storage bootstrap/cache \
     && chmod +x docker-entrypoint.sh
 
