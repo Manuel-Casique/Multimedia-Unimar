@@ -72,8 +72,11 @@ class BackupController extends Controller
             // Mark as running immediately so the frontend can start polling
             Cache::put('backup_status', 'running', now()->addMinutes(30));
 
-            // Dispatch to queue so HTTP request returns instantly
-            Artisan::queue('backup:unimar');
+            // Launch as a background OS process (no queue worker needed)
+            $phpBinary = PHP_BINARY ?: 'php';
+            $artisan = base_path('artisan');
+            $cmd = sprintf('%s %s backup:unimar > /dev/null 2>&1 &', $phpBinary, $artisan);
+            exec($cmd);
 
             return response()->json([
                 'success' => true,
