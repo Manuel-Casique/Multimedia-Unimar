@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class BackupController extends Controller
 {
@@ -14,7 +16,6 @@ class BackupController extends Controller
 
     public function __construct()
     {
-        // Usa S3 si tienes credenciales, sino cae a local (usando la config general de Laravel/Spatie)
         $this->diskName = env('BACKUP_DISK', config('backup.backup.destination.disks')[0] ?? 'local');
         $this->backupName = config('backup.backup.name');
     }
@@ -38,7 +39,6 @@ class BackupController extends Controller
                 }
             }
 
-            // Order by timestamp descending
             usort($backups, function ($a, $b) {
                 return $b['timestamp'] <=> $a['timestamp'];
             });
@@ -61,21 +61,26 @@ class BackupController extends Controller
     public function store()
     {
         try {
-            // Llama a nuestro wrapper personalizado de Artisan de forma asincrónica si quieres que la API no se quede colgada
-            // O directamente para esperar el resultado. Un backup con archivos a S3 puede tardar minutos,
-            // por lo que es mejor devolver que inició y en background se corra.
-            
-            // Para el backend de PHP es común dispararlo por la cola de trabajos, pero si quieres algo simple ahora:
-            // Usamos runInBackground si es Windows o exec indirecto, pero artisan queue es mejor.
-            
-            // Llama al schedule de manera encolada para no bloquear la petición
+            // If a backup is already running, reject the request
+            if (Cache::get('backup_status') === 'running') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya hay un respaldo en progreso. Por favor espera a que termine.'
+                ], 429);
+            }
+
+            // Mark as running immediately so the frontend can start polling
+            Cache::put('backup_status', 'running', now()->addMinutes(30));
+
+            // Dispatch to queue so HTTP request returns instantly
             Artisan::queue('backup:unimar');
 
             return response()->json([
                 'success' => true,
-                'message' => 'El respaldo ha comenzado en segundo plano. Esto puede tomar varios minutos.'
+                'message' => 'El respaldo ha comenzado en segundo plano.'
             ]);
         } catch (\Exception $e) {
+            Cache::forget('backup_status');
             Log::error("Backup creation failed: " . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -84,16 +89,59 @@ class BackupController extends Controller
         }
     }
 
+    /**
+     * Return the current status of the backup process.
+     * Used by the frontend for polling.
+     */
+    public function status()
+    {
+        $status = Cache::get('backup_status', 'idle');
+
+        return response()->json([
+            'success' => true,
+            'status' => $status, // idle | running | completed | failed
+        ]);
+    }
+
+    /**
+     * Get backup schedule settings.
+     */
+    public function getSchedule()
+    {
+        $time = Setting::getValue('backup_time', '03:00');
+
+        return response()->json([
+            'success' => true,
+            'backup_time' => $time,
+        ]);
+    }
+
+    /**
+     * Update backup schedule settings.
+     */
+    public function updateSchedule(Request $request)
+    {
+        $request->validate([
+            'backup_time' => ['required', 'regex:/^([01]\d|2[0-3]):([0-5]\d)$/'],
+        ]);
+
+        Setting::setValue('backup_time', $request->backup_time);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hora de respaldo automático actualizada.',
+            'backup_time' => $request->backup_time,
+        ]);
+    }
+
     public function download($filename)
     {
-        // Sanitizar el filename para evitar Directory Traversal (solo nos quedamos con el nombre del archivo)
         $filename = basename($filename);
         $filepath = $this->backupName . '/' . $filename;
 
         $disk = Storage::disk($this->diskName);
 
         if ($disk->exists($filepath)) {
-            // Si es Amazon S3, devuelve una URL temporal firmada para descarga directa desde AWS
             if ($this->diskName === 's3') {
                 $url = $disk->temporaryUrl(
                     $filepath, now()->addMinutes(5)
@@ -101,7 +149,6 @@ class BackupController extends Controller
                 return response()->json(['success' => true, 'url' => $url]);
             }
 
-            // Si es local, lo descarga de manera convencional
             return $disk->download($filepath);
         }
 
@@ -110,7 +157,6 @@ class BackupController extends Controller
     
     public function destroy($filename)
     {
-        // Sanitizar nombre de archivo
         $filename = basename($filename);
         $filepath = $this->backupName . '/' . $filename;
 

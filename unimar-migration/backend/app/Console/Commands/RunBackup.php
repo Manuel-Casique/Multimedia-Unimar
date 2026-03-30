@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class RunBackup extends Command
@@ -30,6 +31,9 @@ class RunBackup extends Command
         $this->info('Starting backup process...');
         Log::info('Backup triggered via unimar wrapper');
 
+        // Mark backup as running (expires after 30 min as safety net)
+        Cache::put('backup_status', 'running', now()->addMinutes(30));
+
         try {
             if ($this->option('only-db')) {
                 Artisan::call('backup:run', ['--only-db' => true]);
@@ -37,9 +41,11 @@ class RunBackup extends Command
                 Artisan::call('backup:run');
             }
 
+            Cache::put('backup_status', 'completed', now()->addMinutes(5));
             $this->info('Backup completed successfully.');
             Log::info('Backup completed successfully.');
         } catch (\Exception $e) {
+            Cache::put('backup_status', 'failed', now()->addMinutes(5));
             $this->error('Backup failed: ' . $e->getMessage());
             Log::error('Backup failed: ' . $e->getMessage());
             return Command::FAILURE;
