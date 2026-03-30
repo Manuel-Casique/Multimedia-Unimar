@@ -1,0 +1,1 @@
+﻿<?php require __DIR__."/../vendor/autoload.php"; $app = require_once __DIR__."/../bootstrap/app.php"; $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class); echo "AWS_BUCKET: [" . config("filesystems.disks.s3.bucket") . "]<br>"; echo "FILESYSTEM_DISK: [" . config("filesystems.default") . "]<br>";

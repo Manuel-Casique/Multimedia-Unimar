@@ -1,0 +1,1 @@
+﻿<?php try { $pdo = new PDO("mysql:host=127.0.0.1;port=3307;dbname=unimar", "unimar", "unimar"); $stmt = $pdo->query("SELECT * FROM users LIMIT 1"); print_r($stmt->fetch(PDO::FETCH_ASSOC)); $stmtM = $pdo->query("SELECT count(*) FROM media_assets"); echo "MEDIA: " . $stmtM->fetchColumn(); } catch(\Exception $e) { echo $e->getMessage(); }

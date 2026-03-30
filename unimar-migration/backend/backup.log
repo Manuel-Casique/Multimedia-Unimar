@@ -1,0 +1,145 @@
+Starting backup...
+Dumping database unimar_db...
+Backup failed because: The dump process failed with a none successful exitcode.
+Exitcode
+========
+7: Unknown error
+
+Output
+======
+<no output>
+
+Error Output
+============
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' instead
+mysqldump: unknown variable 'ssl-mode=DISABLED'
+.
+#0 /app/vendor/spatie/db-dumper/src/DbDumper.php(200): Spatie\DbDumper\Exceptions\DumpFailed::processDidNotEndSuccessfully(Object(Symfony\Component\Process\Process))
+#1 /app/vendor/spatie/db-dumper/src/Databases/MySql.php(189): Spatie\DbDumper\DbDumper->checkIfDumpWasSuccessFul(Object(Symfony\Component\Process\Process), '/app/storage/ap...')
+#2 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(289): Spatie\DbDumper\Databases\MySql->dumpToFile('/app/storage/ap...')
+#3 [internal function]: Spatie\Backup\Tasks\Backup\BackupJob->Spatie\Backup\Tasks\Backup\{closure}(Object(Spatie\DbDumper\Databases\MySql), 'mysql')
+#4 /app/vendor/laravel/framework/src/Illuminate/Collections/Arr.php(609): array_map(Object(Closure), Array, Array)
+#5 /app/vendor/laravel/framework/src/Illuminate/Collections/Collection.php(799): Illuminate\Support\Arr::map(Array, Object(Closure))
+#6 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(259): Illuminate\Support\Collection->map(Object(Closure))
+#7 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(198): Spatie\Backup\Tasks\Backup\BackupJob->dumpDatabases()
+#8 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(172): Spatie\Backup\Tasks\Backup\BackupJob->createBackupManifest()
+#9 /app/vendor/spatie/laravel-backup/src/Commands/BackupCommand.php(72): Spatie\Backup\Tasks\Backup\BackupJob->run()
+#10 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Spatie\Backup\Commands\BackupCommand->handle()
+#11 /app/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\Container\BoundMethod::Illuminate\Container\{closure}()
+#12 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(95): Illuminate\Container\Util::unwrapIfClosure(Object(Closure))
+#13 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\Container\BoundMethod::callBoundMethod(Object(Illuminate\Foundation\Application), Array, Object(Closure))
+#14 /app/vendor/laravel/framework/src/Illuminate/Container/Container.php(696): Illuminate\Container\BoundMethod::call(Object(Illuminate\Foundation\Application), Array, Array, NULL)
+#15 /app/vendor/laravel/framework/src/Illuminate/Console/Command.php(213): Illuminate\Container\Container->call(Array)
+#16 /app/vendor/symfony/console/Command/Command.php(341): Illuminate\Console\Command->execute(Object(Symfony\Component\Console\Input\ArgvInput), Object(Illuminate\Console\OutputStyle))
+#17 /app/vendor/laravel/framework/src/Illuminate/Console/Command.php(182): Symfony\Component\Console\Command\Command->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Illuminate\Console\OutputStyle))
+#18 /app/vendor/spatie/laravel-backup/src/Commands/BaseCommand.php(29): Illuminate\Console\Command->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#19 /app/vendor/symfony/console/Application.php(1117): Spatie\Backup\Commands\BaseCommand->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#20 /app/vendor/symfony/console/Application.php(356): Symfony\Component\Console\Application->doRunCommand(Object(Spatie\Backup\Commands\BackupCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#21 /app/vendor/symfony/console/Application.php(195): Symfony\Component\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#22 /app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\Component\Console\Application->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#23 /app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate\Foundation\Console\Kernel->handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#24 /app/artisan(13): Illuminate\Foundation\Application->handleCommand(Object(Symfony\Component\Console\Input\ArgvInput))
+#25 {main}
+Backup failed because: The dump process failed with a none successful exitcode.
+Exitcode
+========
+7: Unknown error
+
+Output
+======
+<no output>
+
+Error Output
+============
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' instead
+mysqldump: unknown variable 'ssl-mode=DISABLED'
+.
+[2026-03-23 03:42:11] production.ERROR: The dump process failed with a none successful exitcode.
+Exitcode
+========
+7: Unknown error
+
+Output
+======
+<no output>
+
+Error Output
+============
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' instead
+mysqldump: unknown variable 'ssl-mode=DISABLED'
+ {"exception":"[object] (Spatie\\Backup\\Exceptions\\BackupFailed(code: 0): The dump process failed with a none successful exitcode.
+Exitcode
+========
+7: Unknown error
+
+Output
+======
+<no output>
+
+Error Output
+============
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' instead
+mysqldump: unknown variable 'ssl-mode=DISABLED'
+ at /app/vendor/spatie/laravel-backup/src/Exceptions/BackupFailed.php:17)
+[stacktrace]
+#0 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(186): Spatie\\Backup\\Exceptions\\BackupFailed::from(Object(Spatie\\DbDumper\\Exceptions\\DumpFailed))
+#1 /app/vendor/spatie/laravel-backup/src/Commands/BackupCommand.php(72): Spatie\\Backup\\Tasks\\Backup\\BackupJob->run()
+#2 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Spatie\\Backup\\Commands\\BackupCommand->handle()
+#3 /app/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+#4 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(95): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+#5 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+#6 /app/vendor/laravel/framework/src/Illuminate/Container/Container.php(696): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+#7 /app/vendor/laravel/framework/src/Illuminate/Console/Command.php(213): Illuminate\\Container\\Container->call(Array)
+#8 /app/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#9 /app/vendor/laravel/framework/src/Illuminate/Console/Command.php(182): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#10 /app/vendor/spatie/laravel-backup/src/Commands/BaseCommand.php(29): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#11 /app/vendor/symfony/console/Application.php(1117): Spatie\\Backup\\Commands\\BaseCommand->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#12 /app/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Spatie\\Backup\\Commands\\BackupCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#13 /app/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#14 /app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#15 /app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#16 /app/artisan(13): Illuminate\\Foundation\\Application->handleCommand(Object(Symfony\\Component\\Console\\Input\\ArgvInput))
+#17 {main}
+
+[previous exception] [object] (Spatie\\DbDumper\\Exceptions\\DumpFailed(code: 0): The dump process failed with a none successful exitcode.
+Exitcode
+========
+7: Unknown error
+
+Output
+======
+<no output>
+
+Error Output
+============
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' instead
+mysqldump: unknown variable 'ssl-mode=DISABLED'
+ at /app/vendor/spatie/db-dumper/src/Exceptions/DumpFailed.php:14)
+[stacktrace]
+#0 /app/vendor/spatie/db-dumper/src/DbDumper.php(200): Spatie\\DbDumper\\Exceptions\\DumpFailed::processDidNotEndSuccessfully(Object(Symfony\\Component\\Process\\Process))
+#1 /app/vendor/spatie/db-dumper/src/Databases/MySql.php(189): Spatie\\DbDumper\\DbDumper->checkIfDumpWasSuccessFul(Object(Symfony\\Component\\Process\\Process), '/app/storage/ap...')
+#2 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(289): Spatie\\DbDumper\\Databases\\MySql->dumpToFile('/app/storage/ap...')
+#3 [internal function]: Spatie\\Backup\\Tasks\\Backup\\BackupJob->Spatie\\Backup\\Tasks\\Backup\\{closure}(Object(Spatie\\DbDumper\\Databases\\MySql), 'mysql')
+#4 /app/vendor/laravel/framework/src/Illuminate/Collections/Arr.php(609): array_map(Object(Closure), Array, Array)
+#5 /app/vendor/laravel/framework/src/Illuminate/Collections/Collection.php(799): Illuminate\\Support\\Arr::map(Array, Object(Closure))
+#6 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(259): Illuminate\\Support\\Collection->map(Object(Closure))
+#7 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(198): Spatie\\Backup\\Tasks\\Backup\\BackupJob->dumpDatabases()
+#8 /app/vendor/spatie/laravel-backup/src/Tasks/Backup/BackupJob.php(172): Spatie\\Backup\\Tasks\\Backup\\BackupJob->createBackupManifest()
+#9 /app/vendor/spatie/laravel-backup/src/Commands/BackupCommand.php(72): Spatie\\Backup\\Tasks\\Backup\\BackupJob->run()
+#10 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Spatie\\Backup\\Commands\\BackupCommand->handle()
+#11 /app/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+#12 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(95): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+#13 /app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+#14 /app/vendor/laravel/framework/src/Illuminate/Container/Container.php(696): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+#15 /app/vendor/laravel/framework/src/Illuminate/Console/Command.php(213): Illuminate\\Container\\Container->call(Array)
+#16 /app/vendor/symfony/console/Command/Command.php(341): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#17 /app/vendor/laravel/framework/src/Illuminate/Console/Command.php(182): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#18 /app/vendor/spatie/laravel-backup/src/Commands/BaseCommand.php(29): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#19 /app/vendor/symfony/console/Application.php(1117): Spatie\\Backup\\Commands\\BaseCommand->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#20 /app/vendor/symfony/console/Application.php(356): Symfony\\Component\\Console\\Application->doRunCommand(Object(Spatie\\Backup\\Commands\\BackupCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#21 /app/vendor/symfony/console/Application.php(195): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#22 /app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#23 /app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#24 /app/artisan(13): Illuminate\\Foundation\\Application->handleCommand(Object(Symfony\\Component\\Console\\Input\\ArgvInput))
+#25 {main}
+"} 

@@ -68,12 +68,12 @@ class BackupController extends Controller
             // Para el backend de PHP es común dispararlo por la cola de trabajos, pero si quieres algo simple ahora:
             // Usamos runInBackground si es Windows o exec indirecto, pero artisan queue es mejor.
             
-            // Llama al schedule o directo (esperará que termine)
-            Artisan::call('backup:unimar');
+            // Llama al schedule de manera encolada para no bloquear la petición
+            Artisan::queue('backup:unimar');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Respaldo generado exitosamente.'
+                'message' => 'El respaldo ha comenzado en segundo plano. Esto puede tomar varios minutos.'
             ]);
         } catch (\Exception $e) {
             Log::error("Backup creation failed: " . $e->getMessage());

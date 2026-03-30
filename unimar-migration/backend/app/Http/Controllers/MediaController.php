@@ -205,7 +205,10 @@ class MediaController extends Controller
         }
 
         if ($media->file_path) {
-            Storage::disk('public')->delete($media->file_path);
+            Storage::disk($media->disk ?? 'public')->delete($media->file_path);
+        }
+        if ($media->thumbnail_path) {
+            Storage::disk($media->disk ?? 'public')->delete($media->thumbnail_path);
         }
         $media->delete();
 
@@ -257,12 +260,16 @@ class MediaController extends Controller
                         continue;
                     }
 
-                    // Delete physical file if exists
+                    // Delete physical file and thumbnail if exists
+                    $diskName = $asset->disk ?? 'public';
                     if ($asset->file_path) {
-                        $deleted = Storage::disk('public')->delete($asset->file_path);
+                        $deleted = Storage::disk($diskName)->delete($asset->file_path);
                         if (!$deleted) {
                             Log::warning('Failed to delete file', ['file_path' => $asset->file_path, 'asset_id' => $asset->id]);
                         }
+                    }
+                    if ($asset->thumbnail_path) {
+                        Storage::disk($diskName)->delete($asset->thumbnail_path);
                     }
 
                     // Delete database record

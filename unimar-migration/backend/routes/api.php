@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Galería — ver, editar y eliminar archivos propios
     Route::get('/media', [MediaController::class, 'index']);
     Route::put('/media/{id}', [MediaController::class, 'update']);
+    Route::delete('/media/batch', [MediaController::class, 'destroyBatch']);
     Route::delete('/media/{media}', [MediaController::class, 'destroy']);
 
     // Dashboard y perfil propio
@@ -86,8 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Estadísticas globales de publicaciones
         Route::get('/publications/stats', [PublicationController::class, 'stats']);
 
-        // Eliminación masiva de archivos multimedia
-        Route::delete('/media/batch', [MediaController::class, 'destroyBatch']);
+        // Eliminación masiva de archivos multimedia movida arriba para evitar colisión de rutas
     });
 
     // ─────────────────────────────────────────────────────────────────────────
