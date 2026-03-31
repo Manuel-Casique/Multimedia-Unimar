@@ -20,6 +20,11 @@ php artisan migrate --force
 # Seed initial data (roles, default users, catalog)
 php artisan db:seed --force
 
+# Start the Laravel task scheduler in the background
+# This is what fires automatic backups at the configured time.
+# It runs a loop calling `schedule:run` every 60 seconds — no cron needed.
+php artisan schedule:work --no-interaction &
+
 # Start Laravel Octane with FrankenPHP
 exec php artisan octane:start \
     --server=frankenphp \

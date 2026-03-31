@@ -19,6 +19,6 @@ try {
     // Table may not exist yet (first migration run). Silently fall back.
 }
 
-Schedule::command('backup:run')->dailyAt($backupTime);
+Schedule::command('backup:unimar')->dailyAt($backupTime);
 Schedule::command('backup:clean')->dailyAt('01:30');
 Schedule::command('backup:monitor')->dailyAt('03:00');

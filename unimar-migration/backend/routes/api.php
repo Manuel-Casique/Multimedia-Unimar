@@ -124,6 +124,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/backups', [BackupController::class, 'index']);
         Route::post('/backups', [BackupController::class, 'store']);
         Route::get('/backups/status', [BackupController::class, 'status']);
+        Route::get('/backups/scheduler-status', [BackupController::class, 'schedulerStatus']);
         Route::get('/backups/schedule', [BackupController::class, 'getSchedule']);
         Route::post('/backups/schedule', [BackupController::class, 'updateSchedule']);
         Route::get('/backups/{filename}/download', [BackupController::class, 'download'])->where('filename', '.*');

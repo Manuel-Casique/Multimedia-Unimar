@@ -107,6 +107,33 @@ class BackupController extends Controller
     }
 
     /**
+     * Check if the Laravel scheduler (schedule:work) is running.
+     * Looks for the process in the OS process list.
+     */
+    public function schedulerStatus()
+    {
+        $active = false;
+
+        try {
+            // Works on Linux (Docker container environment)
+            $output = shell_exec('ps aux 2>/dev/null || true');
+            if ($output && (
+                str_contains($output, 'schedule:work') ||
+                str_contains($output, 'schedule:run')
+            )) {
+                $active = true;
+            }
+        } catch (\Throwable $e) {
+            // Ignore — can't detect on this platform
+        }
+
+        return response()->json([
+            'success' => true,
+            'active' => $active,
+        ]);
+    }
+
+    /**
      * Get backup schedule settings.
      */
     public function getSchedule()

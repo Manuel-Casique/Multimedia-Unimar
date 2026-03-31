@@ -7,7 +7,7 @@ import AdminLayout from '@/components/AdminLayout';
 import toast from '@/lib/toast';
 import api from '@/lib/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDatabase, faDownload, faHistory, faClock, faTrash, faSpinner, faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import { faDatabase, faDownload, faHistory, faClock, faTrash, faSpinner, faCheckCircle, faTimesCircle, faWifi, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
 
 interface BackupFile {
@@ -36,6 +36,7 @@ export default function BackupPage() {
   const [backupTime, setBackupTime] = useState('03:00');
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [schedulerActive, setSchedulerActive] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) {
@@ -47,6 +48,7 @@ export default function BackupPage() {
       fetchBackups();
       fetchSchedule();
       checkInitialStatus();
+      checkSchedulerStatus();
     }
   }, [isAuthenticated, isAdmin, _hasHydrated, router]);
 
@@ -94,6 +96,16 @@ export default function BackupPage() {
       }
     } catch (e) {
       // Ignore — server may not support this yet
+    }
+  };
+
+  const checkSchedulerStatus = async () => {
+    try {
+      const response = await api.get('/backups/scheduler-status');
+      setSchedulerActive(response.data.active === true);
+    } catch (e) {
+      // Endpoint may not exist yet, assume unknown
+      setSchedulerActive(null);
     }
   };
 
@@ -230,6 +242,27 @@ export default function BackupPage() {
       pageTitle="Respaldo y Seguridad" 
       pageDescription="Gestiona las copias de seguridad de la base de datos y revisa el estado del servidor."
     >
+      {/* Scheduler status banner */}
+      {schedulerActive === false && (
+        <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-5 py-4">
+          <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">El scheduler no está activo</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Los respaldos automáticos no se ejecutarán. Para activarlo, reinicia el contenedor Docker — el scheduler se inicia automáticamente con el servidor.
+            </p>
+          </div>
+        </div>
+      )}
+      {schedulerActive === true && (
+        <div className="mb-6 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-5 py-3">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+          <p className="text-sm text-emerald-800 font-medium">
+            <FontAwesomeIcon icon={faWifi} className="mr-2" />
+            Scheduler activo — los respaldos automáticos están habilitados.
+          </p>
+        </div>
+      )}
       <div className="grid md:grid-cols-3 gap-6 mt-6">
         {/* Left Column: Create Backup + Schedule */}
         <div className="md:col-span-1 space-y-6">

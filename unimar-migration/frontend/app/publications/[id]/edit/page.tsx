@@ -14,6 +14,13 @@ import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 import PublicationAIPanel from '@/components/PublicationAIPanel';
 
+// Register Quill image resize module (must happen before ReactQuill is imported)
+if (typeof window !== 'undefined') {
+  const Quill = require('quill');
+  const ImageResize = require('quill-image-resize-module-react').default;
+  Quill.register('modules/imageResize', ImageResize);
+}
+
 // Import Quill dynamically
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReactQuill = dynamic(() => import('react-quill'), {
@@ -72,11 +79,16 @@ export default function EditPublicationPage() {
         ['clean'],
       ],
     },
+    imageResize: {
+      parchment: typeof window !== 'undefined' ? require('quill').import('parchment') : undefined,
+      modules: ['Resize', 'DisplaySize'],
+    },
   }), []);
 
   const formats = [
     'header', 'bold', 'italic', 'underline',
     'list', 'bullet', 'align', 'blockquote', 'link', 'image',
+    'width', 'height', 'style',
   ];
 
   useEffect(() => {
@@ -448,9 +460,15 @@ export default function EditPublicationPage() {
           <style jsx global>{`
             .quill-wrapper .ql-container { min-height: 350px; font-size: 16px; }
             .quill-wrapper .ql-editor { min-height: 350px; }
-            .quill-wrapper .ql-editor img { max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0; }
+            .quill-wrapper .ql-editor img { max-width: 100%; border-radius: 8px; margin: 1rem 0; cursor: pointer; }
             .quill-wrapper .ql-toolbar { border-top-left-radius: 8px; border-top-right-radius: 8px; background: #f8fafc; }
             .quill-wrapper .ql-container { border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+            /* Image resize handles */
+            .quill-wrapper .ql-editor img.selected,
+            .quill-wrapper .ql-editor img:focus { outline: 2px solid #30669a; }
+            .image-overlay__handler { background: #30669a !important; border-radius: 50% !important; }
+            .image-overlay { border: 2px solid #30669a !important; }
+            .image-size-overlay { background: rgba(48, 102, 154, 0.85) !important; color: #fff !important; font-size: 12px !important; border-radius: 4px !important; padding: 2px 6px !important; }
           `}</style>
         </>
       )}
