@@ -14,20 +14,26 @@ import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 import PublicationAIPanel from '@/components/PublicationAIPanel';
 
-// Register Quill image resize module (must happen before ReactQuill is imported)
-import { useEffect as useLayoutEffect } from 'react';
-if (typeof window !== 'undefined') {
-  const Quill = require('quill');
-  const ImageResize = require('quill-image-resize-module-react').default;
-  Quill.register('modules/imageResize', ImageResize);
-}
-
-// Import Quill dynamically to avoid SSR issues
+// Import Quill dynamically to avoid SSR issues, and register the image resize
+// module inside the loader so it only ever runs client-side.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ReactQuill = dynamic(() => import('react-quill'), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-lg"></div>,
-}) as React.ComponentType<any>;
+const ReactQuill = dynamic(
+  async () => {
+    const { default: RQ } = await import('react-quill');
+    const { default: ImageResize } = await import('quill-image-resize-module-react');
+    const Quill = (await import('quill')).default;
+    // Guard against double-registration (HMR)
+    if (!(Quill as any).__imageResizeRegistered) {
+      Quill.register('modules/imageResize', ImageResize);
+      (Quill as any).__imageResizeRegistered = true;
+    }
+    return RQ;
+  },
+  {
+    ssr: false,
+    loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-lg" />,
+  }
+) as React.ComponentType<any>;
 
 // Import styles
 import 'react-quill/dist/quill.snow.css';
@@ -78,7 +84,6 @@ export default function NewPublicationPage() {
       ],
     },
     imageResize: {
-      parchment: typeof window !== 'undefined' ? require('quill').import('parchment') : undefined,
       modules: ['Resize', 'DisplaySize'],
     },
   }), []);
