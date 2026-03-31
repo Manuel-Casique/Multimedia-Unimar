@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import api from '@/lib/api';
@@ -14,29 +14,57 @@ import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 import PublicationAIPanel from '@/components/PublicationAIPanel';
 
-// Import Quill dynamically to avoid SSR issues, and register the image resize
-// module inside the loader so it only ever runs client-side.
+// Simple, crash-free dynamic import — no external resize packages
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ReactQuill = dynamic(
-  async () => {
-    const { default: RQ } = await import('react-quill');
-    const { default: ImageResize } = await import('quill-image-resize-module-react');
-    const Quill = (await import('quill')).default;
-    // Guard against double-registration (HMR)
-    if (!(Quill as any).__imageResizeRegistered) {
-      Quill.register('modules/imageResize', ImageResize);
-      (Quill as any).__imageResizeRegistered = true;
-    }
-    return RQ;
-  },
-  {
-    ssr: false,
-    loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-lg" />,
-  }
-) as React.ComponentType<any>;
+const ReactQuill = dynamic(() => import('react-quill'), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-lg" />,
+}) as React.ComponentType<any>;
 
-// Import styles
 import 'react-quill/dist/quill.snow.css';
+
+// ─── Image Size Picker overlay ────────────────────────────────────────────────
+interface SizePickerProps {
+  target: HTMLImageElement;
+  onClose: () => void;
+}
+function ImageSizePicker({ target, onClose }: SizePickerProps) {
+  const rect = target.getBoundingClientRect();
+  const sizes = [
+    { label: '25%', value: '25%' },
+    { label: '50%', value: '50%' },
+    { label: '75%', value: '75%' },
+    { label: '100%', value: '100%' },
+    { label: 'Original', value: '' },
+  ];
+
+  const apply = (value: string) => {
+    target.style.width = value;
+    target.style.height = 'auto';
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-slate-200 p-2 flex flex-col gap-1"
+      style={{ top: rect.top + window.scrollY - 8, left: rect.left + window.scrollX, transform: 'translateY(-100%)' }}
+    >
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1 pb-1">Tamaño de imagen</p>
+      <div className="flex gap-1">
+        {sizes.map((s) => (
+          <button
+            key={s.label}
+            onClick={() => apply(s.value)}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 hover:bg-[#30669a] hover:text-white text-slate-700 transition-colors"
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function NewPublicationPage() {
   const router = useRouter();
@@ -46,6 +74,9 @@ export default function NewPublicationPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaPickerMode, setMediaPickerMode] = useState<'thumbnail' | 'content'>('content');
   const quillRef = useRef<any>(null);
+
+  // Image size picker state
+  const [pickerTarget, setPickerTarget] = useState<HTMLImageElement | null>(null);
 
   // Form data
   const [title, setTitle] = useState('');
@@ -83,16 +114,34 @@ export default function NewPublicationPage() {
         ['clean'],
       ],
     },
-    imageResize: {
-      modules: ['Resize', 'DisplaySize'],
-    },
   }), []);
 
   const formats = [
     'header', 'bold', 'italic', 'underline',
     'list', 'bullet', 'align', 'blockquote', 'link', 'image',
-    'width', 'height', 'style',
   ];
+
+  // Attach click listener to images inside the Quill editor for size picker
+  const attachImageClickHandlers = useCallback(() => {
+    const editor = document.querySelector('.quill-wrapper .ql-editor');
+    if (!editor) return;
+    const handleClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+        setPickerTarget(target as HTMLImageElement);
+      } else {
+        setPickerTarget(null);
+      }
+    };
+    editor.addEventListener('click', handleClick);
+    return () => editor.removeEventListener('click', handleClick);
+  }, []);
+
+  useEffect(() => {
+    // Re-attach after content changes to cover newly inserted images
+    const cleanup = attachImageClickHandlers();
+    return cleanup;
+  }, [content, attachImageClickHandlers]);
 
   useEffect(() => {
     if (_hasHydrated) {
@@ -185,7 +234,7 @@ export default function NewPublicationPage() {
     if (mediaPickerMode === 'thumbnail') {
       setThumbnailUrl(url);
     } else {
-      const imageHtml = `<p><img src="${url}" alt="${asset.title || asset.original_name}" /></p>`;
+      const imageHtml = `<p><img src="${url}" alt="${asset.title || asset.original_name}" style="width:100%" /></p>`;
       setContent((prev) => prev + imageHtml);
     }
   };
@@ -196,6 +245,14 @@ export default function NewPublicationPage() {
 
   return (
     <AdminLayout pageTitle="Nueva Publicación" pageDescription="Crea un nuevo artículo.">
+      {/* Image size picker — dismisses when clicking outside */}
+      {pickerTarget && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setPickerTarget(null)} />
+          <ImageSizePicker target={pickerTarget} onClose={() => setPickerTarget(null)} />
+        </>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <button
@@ -377,6 +434,7 @@ export default function NewPublicationPage() {
               Insertar Imagen
             </button>
           </div>
+          <p className="text-[11px] text-slate-400 mb-2">💡 Haz clic en una imagen insertada para cambiar su tamaño.</p>
           <div className="quill-wrapper">
             <ReactQuill
               theme="snow"
@@ -405,15 +463,10 @@ export default function NewPublicationPage() {
       <style jsx global>{`
         .quill-wrapper .ql-container { min-height: 350px; font-size: 16px; }
         .quill-wrapper .ql-editor { min-height: 350px; }
-        .quill-wrapper .ql-editor img { max-width: 100%; border-radius: 8px; margin: 1rem 0; cursor: pointer; }
+        .quill-wrapper .ql-editor img { max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0; cursor: pointer; transition: outline 0.15s; }
+        .quill-wrapper .ql-editor img:hover { outline: 2px solid #30669a; outline-offset: 2px; }
         .quill-wrapper .ql-toolbar { border-top-left-radius: 8px; border-top-right-radius: 8px; background: #f8fafc; }
         .quill-wrapper .ql-container { border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-        /* Image resize handles */
-        .quill-wrapper .ql-editor img.selected,
-        .quill-wrapper .ql-editor img:focus { outline: 2px solid #30669a; }
-        .image-overlay__handler { background: #30669a !important; border-radius: 50% !important; }
-        .image-overlay { border: 2px solid #30669a !important; }
-        .image-size-overlay { background: rgba(48, 102, 154, 0.85) !important; color: #fff !important; font-size: 12px !important; border-radius: 4px !important; padding: 2px 6px !important; }
       `}</style>
     </AdminLayout>
   );
