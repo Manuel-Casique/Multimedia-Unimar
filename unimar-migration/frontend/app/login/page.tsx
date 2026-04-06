@@ -61,7 +61,7 @@ export default function LoginPage() {
       <nav className="bg-white shadow-sm">
           <div className="container mx-auto px-4 flex justify-between items-center" style={{ maxWidth: '1140px', padding: '0.5rem 1rem' }}>
               <a href="https://portalunimar.unimar.edu.ve/home" className="flex items-center">
-                  <img src="https://portalunimar.unimar.edu.ve/image/logounimar-22.jpg" style={{ width: '150px' }} alt="UNIMAR" />
+                  <img src="https://portalunimar.unimar.edu.ve/image/logo-unimar-127.png" style={{ width: '150px' }} alt="UNIMAR" />
               </a>
               <span style={{ color: '#30669a', fontWeight: 500 }}>Bienvenid@</span>
           </div>
@@ -91,7 +91,7 @@ export default function LoginPage() {
                           >
                               {/* img-login - floats above using position relative */}
                               <img 
-                                  src="https://portalunimar.unimar.edu.ve/./image/user.png" 
+                                  src=""
                                   alt="User" 
                                   className="img-login"
                                   style={{ 
