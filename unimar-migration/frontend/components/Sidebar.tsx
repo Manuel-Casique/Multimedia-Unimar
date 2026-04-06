@@ -86,7 +86,7 @@ export default function Sidebar() {
       >
         <div className="flex items-center gap-2 w-full">
           <Image
-            src="https://portalunimar.unimar.edu.ve/image/logo-unimar-127.png"
+            src="/unimar-logo.svg"
             alt="UNIMAR"
             width={40}
             height={40}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import api from '@/lib/api';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function LoginPage() {
       <nav className="bg-white shadow-sm">
           <div className="container mx-auto px-4 flex justify-between items-center" style={{ maxWidth: '1140px', padding: '0.5rem 1rem' }}>
               <a href="https://portalunimar.unimar.edu.ve/home" className="flex items-center">
-                  <img src="https://portalunimar.unimar.edu.ve/image/logo-unimar-127.png" style={{ width: '150px' }} alt="UNIMAR" />
+                  <Image src="/unimar-logo.svg" width={150} height={50} style={{ width: '150px', height: 'auto' }} alt="UNIMAR" />
               </a>
               <span style={{ color: '#30669a', fontWeight: 500 }}>Bienvenid@</span>
           </div>
@@ -90,17 +91,7 @@ export default function LoginPage() {
                               }}
                           >
                               {/* img-login - floats above using position relative */}
-                              <img 
-                                  src=""
-                                  alt="User" 
-                                  className="img-login"
-                                  style={{ 
-                                      width: '100px',
-                                      position: 'relative',
-                                      bottom: '3.5rem',
-                                      marginBottom: '-2.5rem'
-                                  }}
-                              />
+                              
                               {/* title-login */}
                               <span 
                                   className="title-login block"
